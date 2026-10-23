@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -26,7 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto max-w-md px-4 pt-[max(env(safe-area-inset-top),24px)] pb-32">
           {children}
         </main>
-        <TabBar />
+        <Suspense>
+          <TabBar />
+        </Suspense>
       </body>
     </html>
   );

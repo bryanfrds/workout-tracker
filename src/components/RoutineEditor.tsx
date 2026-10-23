@@ -1,15 +1,15 @@
 "use client";
 
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { getState, setState, useAppState } from "@/lib/store";
 import type { PlannedExercise } from "@/lib/types";
 import { newId } from "@/lib/workout";
 
 const BLANK: PlannedExercise = { name: "", sets: 3, kg: 20, reps: 10 };
 
-export default function EditRoutinePage({ params }: PageProps<"/routine/[id]">) {
-  const { id } = use(params);
+export default function RoutineEditor() {
+  const { id } = useParams<{ id: string }>();
   const app = useAppState();
   if (!app) return null;
   const existing = app.routines.find((r) => r.id === id);
