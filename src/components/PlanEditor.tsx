@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DAY_NAMES } from "@/lib/hyrox";
+import { liveDays, setPlanDay } from "@/lib/plans";
 import { setState, useAppState } from "@/lib/store";
 import type { Plan, Routine } from "@/lib/types";
 import { newId } from "@/lib/workout";
@@ -52,18 +53,10 @@ function RoutineSelect({
 function Editor({ existing, routines, planCount }: { existing?: Plan; routines: Routine[]; planCount: number }) {
   const router = useRouter();
   const [name, setName] = useState(existing?.name ?? "");
-  const [days, setDays] = useState<string[][]>(existing?.days.map((d) => [...d]) ?? EMPTY_WEEK());
+  // Drop ids of routines deleted since the plan was saved.
+  const [days, setDays] = useState<string[][]>(existing ? liveDays(existing, routines) : EMPTY_WEEK());
 
-  const setDay = (i: number, slot: number, id: string) =>
-    setDays((ds) =>
-      ds.map((d, j) => {
-        if (j !== i) return d;
-        const next = [...d];
-        next[slot] = id;
-        // Clearing the first choice clears the whole day (rest).
-        return slot === 0 && !id ? [] : next.filter(Boolean);
-      }),
-    );
+  const setDay = (i: number, slot: number, id: string) => setDays((ds) => setPlanDay(ds, i, slot, id));
 
   const canSave = name.trim() !== "" && days.some((d) => d.length > 0);
 
@@ -83,12 +76,12 @@ function Editor({ existing, routines, planCount }: { existing?: Plan; routines: 
 
   function remove() {
     if (!existing) return;
+    router.push("/");
     setState((s) => {
       const plans = (s.plans ?? []).filter((p) => p.id !== existing.id);
       const activePlanId = s.activePlanId === existing.id ? plans[0]?.id : s.activePlanId;
       return { ...s, plans, activePlanId };
     });
-    router.push("/");
   }
 
   return (
