@@ -96,7 +96,8 @@ function ActiveWorkout() {
   const rounds = active.circuit ? Math.max(...active.exercises.map((e) => e.sets.length)) : 0;
 
   function finish() {
-    router.push(active.routineId.startsWith("hyrox-") ? "/plan" : "/history");
+    const inPlan = app.plans?.some((p) => p.days.flat().includes(active.routineId));
+    router.push(inPlan ? "/plan" : "/history");
     setState((s) => {
       if (!s.active) return s;
       const session = { ...s.active, restEndsAt: undefined, endedAt: Date.now() };

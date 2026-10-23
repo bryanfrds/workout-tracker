@@ -2,19 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSyncExternalStore } from "react";
-import { planWeek, skipKey, weekStart, type DayStatus } from "@/lib/hyrox";
+import PlanPicker from "@/components/PlanPicker";
+import { logRestDay, startRoutine, toggleSkip } from "@/lib/plan-actions";
+import { activePlan, planWeek, type DayStatus } from "@/lib/plans";
 import { setState, useAppState } from "@/lib/store";
-import type { Routine, Session } from "@/lib/types";
-import { describeSet, kindOf, startSession } from "@/lib/workout";
-
-const noop = () => () => {};
-
-/** Today's date, read on the client only so server and client render the same. */
-function useToday(): Date | null {
-  const day = useSyncExternalStore(noop, () => new Date().toDateString(), () => null);
-  return day ? new Date(day) : null;
-}
+import type { Routine } from "@/lib/types";
+import { useToday } from "@/lib/use-today";
+import { describeSet, kindOf } from "@/lib/workout";
 
 export default function PlanPage() {
   const app = useAppState();
@@ -22,28 +16,23 @@ export default function PlanPage() {
   const router = useRouter();
   if (!app || !today) return null;
 
-  const start = weekStart(today);
-  const { days, doneCount, recent } = planWeek(app, today);
+  const plan = activePlan(app);
+  if (!plan) {
+    return (
+      <>
+        <h1 className="mt-2 text-3xl font-extrabold">Plan</h1>
+        <Link href="/plans/new" className="mt-4 block rounded-xl bg-accent p-3.5 text-center font-bold text-accent-ink">
+          Make a weekly plan
+        </Link>
+      </>
+    );
+  }
+  const { days, doneCount, trainingDays, recent } = planWeek(app, plan, today);
   const history = recent.map((w) => ({ label: w.weeksAgo === 0 ? "This week" : `${w.weeksAgo}w ago`, done: w.done }));
 
   function start_(routine: Routine) {
-    setState((s) => (s.active ? s : { ...s, active: startSession(routine, s.sessions) }));
+    startRoutine(routine);
     router.push("/workout");
-  }
-
-  function toggleSkip(day: number) {
-    const key = skipKey(start, day);
-    setState((s) => {
-      const list = s.planSkips ?? [];
-      return { ...s, planSkips: list.includes(key) ? list.filter((k) => k !== key) : [...list, key] };
-    });
-  }
-
-  function logRestDay(routine: Routine) {
-    setState((s) => {
-      const session: Session = { ...startSession(routine, s.sessions), exercises: [], endedAt: Date.now() };
-      return { ...s, sessions: [...s.sessions, session] };
-    });
   }
 
   function setRounds(routine: Routine, rounds: number) {
@@ -60,18 +49,27 @@ export default function PlanPage() {
     skipped: "bg-card2 text-muted line-through",
     today: "border-2 border-accent text-accent",
     missed: "bg-card2 text-muted",
+    rest: "bg-card2 text-muted",
     upcoming: "bg-card2 text-text",
   };
 
   return (
     <>
-      <h1 className="mt-2 text-3xl font-extrabold">HYROX plan</h1>
+      <div className="mt-2 flex items-start justify-between gap-3">
+        <h1 className="text-3xl font-extrabold">{plan.name}</h1>
+        <Link href={`/plans/${plan.id}`} className="mt-1.5 shrink-0 rounded-full bg-card px-3 py-1.5 text-sm text-muted">
+          Edit plan
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-muted">Same week every week. Skip or swap days when you need recovery.</p>
+      <PlanPicker plans={app.plans ?? []} activeId={plan.id} />
 
       <section className="mt-4 rounded-2xl bg-card p-4">
         <div className="flex items-baseline justify-between">
           <h2 className="font-bold">This week</h2>
-          <span className="text-sm text-muted">{doneCount} of 7 days done</span>
+          <span className="text-sm text-muted">
+            {doneCount} of {trainingDays} workouts done
+          </span>
         </div>
         <div className="mt-3 grid grid-cols-7 gap-1.5">
           {days.map((d) => (
@@ -81,7 +79,7 @@ export default function PlanPage() {
               aria-label={`${d.name}: ${d.status}`}
               className={`grid h-9 place-items-center rounded-lg text-xs font-bold ${badge[d.status]}`}
             >
-              {d.status === "done" ? "✓" : d.name[0]}
+              {d.status === "done" ? "✓" : d.status === "rest" ? "–" : d.name[0]}
             </a>
           ))}
         </div>
@@ -89,10 +87,10 @@ export default function PlanPage() {
           {history.map((w) => (
             <div key={w.label}>
               <div className="h-12 overflow-hidden rounded-lg bg-card2">
-                <div className="mt-auto bg-accent" style={{ height: `${(w.done / 7) * 100}%`, marginTop: `${(1 - w.done / 7) * 3}rem` }} />
+                <div className="mt-auto bg-accent" style={{ height: `${Math.min(1, w.done / Math.max(1, trainingDays)) * 3}rem`, marginTop: `${(1 - Math.min(1, w.done / Math.max(1, trainingDays))) * 3}rem` }} />
               </div>
               <div className="mt-1 text-[11px] text-muted">
-                {w.label} · {w.done}/7
+                {w.label} · {w.done}/{trainingDays}
               </div>
             </div>
           ))}
@@ -100,8 +98,19 @@ export default function PlanPage() {
       </section>
 
       {days.map((d) => {
-        const main = d.routines[0];
-        if (!main) return null;
+        if (d.routines.length === 0) {
+          return (
+            <div key={d.day} id={`day-${d.day}`} className="mt-3 flex items-center gap-3 rounded-2xl bg-card p-4 opacity-70">
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xs font-bold ${badge.rest}`}>
+                {d.name.slice(0, 3)}
+              </span>
+              <span>
+                <span className="block text-xs text-muted">{d.name}</span>
+                <span className="block font-bold">Rest day</span>
+              </span>
+            </div>
+          );
+        }
         return (
           <details
             key={d.day}
@@ -191,7 +200,7 @@ export default function PlanPage() {
               ))}
 
               {d.status !== "done" && (
-                <button onClick={() => toggleSkip(d.day)} className="w-full p-2 text-sm text-muted">
+                <button onClick={() => toggleSkip(plan.id, today, d.day)} className="w-full p-2 text-sm text-muted">
                   {d.status === "skipped" ? "Undo skip" : "Skip this day"}
                 </button>
               )}
