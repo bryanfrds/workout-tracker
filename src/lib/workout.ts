@@ -68,3 +68,15 @@ export function formatClock(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+/** What's next, for the "rest's over" notification. */
+export function nextSetText(s: Session): string {
+  for (const ex of s.exercises) {
+    const i = ex.sets.findIndex((x) => !x.done);
+    if (i >= 0) {
+      const set = ex.sets[i];
+      return `Next: ${ex.name} · set ${i + 1} of ${ex.sets.length} · ${formatKg(set.kg)} × ${set.reps}`;
+    }
+  }
+  return "Back to it";
+}

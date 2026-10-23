@@ -9,7 +9,7 @@ self.addEventListener("push", (event) => {
   // Always show something: Safari drops subscriptions that get silent pushes.
   let data = {};
   try {
-    data = event.data ? event.data.json() : {};
+    data = (event.data ? event.data.json() : null) ?? {};
   } catch {
     data = { body: event.data ? event.data.text() : "" };
   }

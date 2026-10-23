@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import RegisterServiceWorker from "@/components/RegisterServiceWorker";
+import RestPushSync from "@/components/RestPushSync";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <TabBar />
         </Suspense>
         <RegisterServiceWorker />
+        <RestPushSync />
       </body>
     </html>
   );

@@ -33,9 +33,18 @@ export type Session = {
   restEndsAt?: number;
 };
 
+export type Notifications = {
+  subscription: PushSubscriptionJSON;
+  /** Daily "time to train" reminder, e.g. "18:30", and its server schedule id. */
+  reminder?: { time: string; id: string };
+};
+
 export type AppState = {
   routines: Routine[];
   sessions: Session[];
   active?: Session;
   restSeconds: number;
+  notifications?: Notifications;
+  /** The scheduled "rest's over" push for the current rest, so it can be cancelled. */
+  restPush?: { endsAt: number; id: string };
 };
