@@ -12,7 +12,7 @@ const TABS = [
 
 export default function TabBar() {
   const path = usePathname();
-  const isOn = (href: string) => (href === "/" ? path === "/" || path.startsWith("/routine") : path.startsWith(href));
+  const isOn = (href: string) => (href === "/" ? path === "/" || path.startsWith("/routine") : href === "/plan" ? path === "/plan" || path.startsWith("/plans") : path.startsWith(href));
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#131317]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
