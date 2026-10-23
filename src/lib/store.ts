@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { HYROX_ROUTINES, withPlanRoutines } from "./hyrox";
 import type { AppState } from "./types";
 
 const KEY = "workout-tracker:v1";
@@ -38,6 +39,7 @@ export const SEED: AppState = {
         { name: "Lunges", sets: 3, kg: 16, reps: 10 },
       ],
     },
+    ...HYROX_ROUTINES,
   ],
 };
 
@@ -48,7 +50,9 @@ function load(): AppState {
   if (state) return state;
   try {
     const raw = localStorage.getItem(KEY);
-    state = raw ? { ...SEED, ...(JSON.parse(raw) as AppState) } : SEED;
+    const saved = raw ? { ...SEED, ...(JSON.parse(raw) as AppState) } : SEED;
+    // Saves from before the HYROX plan existed get its routines added.
+    state = { ...saved, routines: withPlanRoutines(saved.routines) };
   } catch {
     state = SEED;
   }
