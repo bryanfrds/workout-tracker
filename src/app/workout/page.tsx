@@ -131,7 +131,14 @@ function ActiveWorkout() {
                   <div key={ei} className="mt-3">
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 className="text-sm font-semibold">{ex.name}</h3>
-                      {ex.target && <span className="text-xs text-muted">{ex.target}</span>}
+                      <span className="text-xs text-muted">
+                        {ex.target}
+                        {ex.optional && (
+                          <button onClick={() => setSkipped(ei, true)} className="ml-2 underline">
+                            Not available?
+                          </button>
+                        )}
+                      </span>
                     </div>
                     <SetHeader ex={ex} first="" />
                     <SetRow
