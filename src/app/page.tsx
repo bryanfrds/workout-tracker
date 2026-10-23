@@ -51,7 +51,15 @@ export default function RoutinesPage() {
         </Link>
       )}
 
-      {app.routines.map((r) => {
+      <Link href="/plan" className="mt-4 flex items-center justify-between rounded-2xl bg-card p-4">
+        <span>
+          <span className="block text-xs text-muted">Training plan</span>
+          <span className="block font-bold">HYROX week</span>
+        </span>
+        <span className="text-muted">›</span>
+      </Link>
+
+      {app.routines.filter((r) => !r.plan).map((r) => {
         const sets = r.exercises.reduce((n, e) => n + e.sets, 0);
         const last = lastSessionOf(app.sessions, r.id);
         return (

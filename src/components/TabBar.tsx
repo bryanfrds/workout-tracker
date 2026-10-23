@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
+  { href: "/plan", label: "Plan", icon: "▦" },
   { href: "/", label: "Routines", icon: "☰" },
   { href: "/workout", label: "Workout", icon: "●" },
   { href: "/history", label: "History", icon: "◷" },
@@ -20,7 +21,7 @@ export default function TabBar() {
           <Link
             key={t.href}
             href={t.href}
-            className={`flex w-20 flex-col items-center gap-0.5 ${isOn(t.href) ? "text-accent" : "text-muted"}`}
+            className={`flex w-16 flex-col items-center gap-0.5 ${isOn(t.href) ? "text-accent" : "text-muted"}`}
           >
             <span className="text-lg leading-none">{t.icon}</span>
             {t.label}
