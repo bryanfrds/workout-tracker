@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppState } from "@/lib/store";
+import { isPlainRestDay } from "@/lib/hyrox";
 import type { Session } from "@/lib/types";
 import { averageRest, bestSet, describeSet, formatClock, kindOf } from "@/lib/workout";
 
@@ -31,7 +32,7 @@ export default function HistoryPage() {
 
   const sessions = [...app.sessions].sort((a, b) => b.startedAt - a.startedAt);
   const weekStart = startOfWeek();
-  const thisWeek = sessions.filter((s) => s.startedAt >= weekStart);
+  const thisWeek = sessions.filter((s) => s.startedAt >= weekStart && !isPlainRestDay(s));
   const trained = new Set(thisWeek.map((s) => (new Date(s.startedAt).getDay() + 6) % 7));
 
   return (
@@ -64,7 +65,7 @@ export default function HistoryPage() {
               <h2 className="font-bold">{s.routineName}</h2>
               <span className="text-sm text-muted">
                 {new Date(s.startedAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}{" "}
-                · {minutes} min
+                {!isPlainRestDay(s) && ` · ${minutes} min`}
               </span>
             </div>
             <ul className="mt-2 text-sm text-[#c9c9d1]">
