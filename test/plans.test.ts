@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { HYROX_ROUTINES } from "@/lib/hyrox";
-import { SEED_PLANS, activePlan, dayRoutines, isPlainRestDay, planWeek, withPlans } from "@/lib/plans";
+import {
+  SEED_PLANS,
+  activePlan,
+  dayRoutines,
+  isPlainRestDay,
+  liveDays,
+  planWeek,
+  setPlanDay,
+  withPlans,
+  withoutRoutine,
+} from "@/lib/plans";
 import { SEED } from "@/lib/store";
 import type { AppState, Plan, Session } from "@/lib/types";
 import { startSession } from "@/lib/workout";
@@ -35,6 +45,12 @@ describe("seed plans", () => {
     expect(withPlans(base)).toMatchObject({ activePlanId: "hyrox", plans: SEED_PLANS });
     const noPush = withPlans({ ...base, routines: routines.filter((r) => r.id !== "push") });
     expect(noPush.plans?.map((p) => p.id)).toEqual(["hyrox"]);
+  });
+
+  it("moves skips saved before plans existed onto HYROX", () => {
+    const s = withPlans({ routines, sessions: [], restSeconds: 90, planSkips: ["2026-10-19:3"] });
+    expect(s.planSkips).toEqual(["hyrox:2026-10-19:3"]);
+    expect(planWeek(s, hyrox, SAT).days[2].status).toBe("skipped");
   });
 
   it("keeps saved plans and repairs a missing active plan", () => {
@@ -136,5 +152,50 @@ describe("isPlainRestDay", () => {
     expect(isPlainRestDay(fri)).toBe(true);
     fri.exercises[0].sets[0].done = true;
     expect(isPlainRestDay(fri)).toBe(false);
+  });
+});
+
+describe("deleted routines", () => {
+  const noPush = routines.filter((r) => r.id !== "push");
+
+  it("are removed from every plan when deleted", () => {
+    const plans = withoutRoutine(SEED_PLANS, "push")!;
+    expect(plans.find((p) => p.id === "ppl")!.days.map((d) => d[0] ?? "rest")).toEqual([
+      "rest", "pull", "legs", "rest", "pull", "legs", "rest",
+    ]);
+    expect(plans.find((p) => p.id === "hyrox")).toEqual(hyrox);
+  });
+
+  it("are dropped when an old plan is opened in the editor", () => {
+    expect(liveDays(ppl, noPush)[0]).toEqual([]);
+  });
+
+  it("don't mark a day done from an old session of that routine", () => {
+    const r = planWeek({ routines: noPush, sessions: [finished("push", at(2026, 9, 19))] }, ppl, SAT);
+    expect(r.days[0].status).toBe("rest");
+    expect(r.doneCount).toBe(0);
+    expect(r.trainingDays).toBe(4);
+  });
+});
+
+describe("day matching with alternatives", () => {
+  it("moves an earlier match to fit a later session in", () => {
+    // Mon = push or pull, Wed = push. Push Monday then pull Tuesday should fill both days.
+    const plan: Plan = { id: "x", name: "x", days: [["push", "pull"], [], ["push"], [], [], [], []] };
+    const r = planWeek(app([finished("push", at(2026, 9, 19)), finished("pull", at(2026, 9, 20))]), plan, SAT);
+    expect(r.doneCount).toBe(2);
+    expect(r.days[0].session?.routineId).toBe("pull");
+    expect(r.days[2].session?.routineId).toBe("push");
+  });
+});
+
+describe("setPlanDay", () => {
+  const week = () => [["push", "pull"], [], [], [], [], [], []];
+
+  it("sets, clears and dedupes choices", () => {
+    expect(setPlanDay(week(), 1, 0, "legs")[1]).toEqual(["legs"]);
+    expect(setPlanDay(week(), 0, 1, "")[0]).toEqual(["push"]);
+    expect(setPlanDay(week(), 0, 0, "")[0]).toEqual([]);
+    expect(setPlanDay(week(), 0, 0, "pull")[0]).toEqual(["pull"]);
   });
 });
