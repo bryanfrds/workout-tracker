@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
-import { DAY_NAMES, skipKey, weekStart, weekday } from "@/lib/hyrox";
+import { planWeek, skipKey, weekStart, type DayStatus } from "@/lib/hyrox";
 import { setState, useAppState } from "@/lib/store";
 import type { Routine, Session } from "@/lib/types";
 import { describeSet, kindOf, startSession } from "@/lib/workout";
 
-const WEEK = 7 * 24 * 60 * 60 * 1000;
 const noop = () => () => {};
 
 /** Today's date, read on the client only so server and client render the same. */
@@ -17,8 +16,6 @@ function useToday(): Date | null {
   return day ? new Date(day) : null;
 }
 
-type DayStatus = "done" | "skipped" | "today" | "missed" | "upcoming";
-
 export default function PlanPage() {
   const app = useAppState();
   const today = useToday();
@@ -26,39 +23,8 @@ export default function PlanPage() {
   if (!app || !today) return null;
 
   const start = weekStart(today);
-  const end = start.getTime() + WEEK;
-  const todayNum = weekday(today);
-  const skips = new Set(app.planSkips ?? []);
-  const plan = app.routines.filter((r) => r.plan === "hyrox");
-  const finished = app.sessions.filter((s) => s.endedAt && s.startedAt >= start.getTime() && s.startedAt < end);
-
-  const days = DAY_NAMES.map((name, i) => {
-    const day = i + 1;
-    const routines = plan.filter((r) => r.day === day);
-    const session = finished.find((s) => routines.some((r) => r.id === s.routineId));
-    const status: DayStatus = session
-      ? "done"
-      : skips.has(skipKey(start, day))
-        ? "skipped"
-        : day === todayNum
-          ? "today"
-          : day < todayNum
-            ? "missed"
-            : "upcoming";
-    return { day, name, routines, session, status };
-  });
-  const doneCount = days.filter((d) => d.status === "done").length;
-
-  // Last four weeks, oldest first: how many plan days were done.
-  const history = [3, 2, 1, 0].map((ago) => {
-    const from = start.getTime() - ago * WEEK;
-    const ids = new Set(
-      app.sessions
-        .filter((s) => s.endedAt && s.startedAt >= from && s.startedAt < from + WEEK && s.routineId.startsWith("hyrox-"))
-        .map((s) => plan.find((r) => r.id === s.routineId)?.day),
-    );
-    return { label: ago === 0 ? "This week" : `${ago}w ago`, done: ids.size };
-  });
+  const { days, doneCount, recent } = planWeek(app, today);
+  const history = recent.map((w) => ({ label: w.weeksAgo === 0 ? "This week" : `${w.weeksAgo}w ago`, done: w.done }));
 
   function start_(routine: Routine) {
     setState((s) => (s.active ? s : { ...s, active: startSession(routine, s.sessions) }));
