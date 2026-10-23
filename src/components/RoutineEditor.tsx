@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getState, setState, useAppState } from "@/lib/store";
 import type { PlannedExercise } from "@/lib/types";
+import NumberInput from "@/components/NumberInput";
 import { newId } from "@/lib/workout";
 
 const BLANK: PlannedExercise = { name: "", sets: 3, kg: 20, reps: 10 };
@@ -21,12 +22,9 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
   return (
     <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-muted">
       {label}
-      <input
-        type="number"
-        inputMode="decimal"
-        min={0}
-        value={Number.isFinite(value) ? value : ""}
-        onChange={(e) => onChange(e.target.valueAsNumber)}
+      <NumberInput
+        value={value}
+        onChange={onChange}
         className="w-full rounded-lg bg-card2 p-2 text-center text-sm normal-case tracking-normal text-text outline-none focus:ring-2 focus:ring-accent"
       />
     </label>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import NumberInput from "@/components/NumberInput";
 import RestTimer from "@/components/RestTimer";
 import { setState, useAppState } from "@/lib/store";
 import type { LoggedSet, Session } from "@/lib/types";
@@ -65,19 +66,20 @@ function ActiveWorkout() {
   function toggle(ei: number, si: number) {
     const nowDone = !active.exercises[ei].sets[si].done;
     editSet(ei, si, { done: nowDone });
-    const startRest = nowDone && done + 1 < total;
+    if (!nowDone) return;
+    const startRest = done + 1 < total;
     setState((s) =>
       s.active ? { ...s, active: { ...s.active, restEndsAt: startRest ? Date.now() + s.restSeconds * 1000 : undefined } } : s,
     );
   }
 
   function finish() {
+    router.push("/history");
     setState((s) => {
       if (!s.active) return s;
       const session = { ...s.active, restEndsAt: undefined, endedAt: Date.now() };
       return { ...s, active: undefined, sessions: [...s.sessions, session] };
     });
-    router.push("/history");
   }
 
   function discard() {
@@ -111,14 +113,11 @@ function ActiveWorkout() {
               <div key={si} className="grid grid-cols-[26px_1fr_1fr_44px] items-center gap-2 py-1.5 text-sm">
                 <span className="font-semibold text-muted">{si + 1}</span>
                 {(["kg", "reps"] as const).map((field) => (
-                  <input
+                  <NumberInput
                     key={field}
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
                     aria-label={`${ex.name} set ${si + 1} ${field}`}
-                    value={Number.isFinite(s[field]) ? s[field] : ""}
-                    onChange={(e) => editSet(ei, si, { [field]: e.target.valueAsNumber })}
+                    value={s[field]}
+                    onChange={(n) => editSet(ei, si, { [field]: n })}
                     className={`w-full rounded-[10px] bg-card2 p-2 text-center outline-none focus:ring-2 focus:ring-accent ${s.done ? "opacity-50" : ""}`}
                   />
                 ))}
