@@ -15,7 +15,9 @@ export function withPlans(state: AppState): AppState {
   // Only seed PPL if its routines still exist in this save.
   const ids = new Set(state.routines.map((r) => r.id));
   const plans = SEED_PLANS.filter((p) => p.days.flat().every((id) => ids.has(id)));
-  return { ...state, plans, activePlanId: state.activePlanId ?? plans[0]?.id };
+  // Skips saved before plans existed were all HYROX ("2026-10-19:3").
+  const planSkips = state.planSkips?.map((k) => (/^\d{4}-/.test(k) ? `hyrox:${k}` : k));
+  return { ...state, plans, planSkips, activePlanId: state.activePlanId ?? plans[0]?.id };
 }
 
 export function activePlan(state: Pick<AppState, "plans" | "activePlanId">): Plan | undefined {
@@ -46,19 +48,60 @@ function weekFrom(today: Date, weeksAgo: number): { from: number; to: number } {
 }
 
 /**
- * Matches each finished session in a week to one plan day. A session goes to
- * the day it was done on if that day has its routine, otherwise to the earliest
- * open day that has it — so Push on Monday doesn't also tick Thursday's Push.
+ * Matches finished sessions in a week to plan days, one session per day. A
+ * session prefers the day it was done on, otherwise any open day that has its
+ * routine — so Push on Monday doesn't also tick Thursday's Push. If needed, an
+ * earlier match is moved to another of its days to fit a later session in.
  */
-function assignSessions(plan: Plan, sessions: Session[]): Map<number, Session> {
+function assignSessions(days: string[][], sessions: Session[]): Map<number, Session> {
+  const ordered = [...sessions].sort((a, b) => a.startedAt - b.startedAt);
+  const candidates = (s: Session) => {
+    const own = weekday(new Date(s.startedAt));
+    const fits = [1, 2, 3, 4, 5, 6, 7].filter((d) => days[d - 1]?.includes(s.routineId));
+    return fits.includes(own) ? [own, ...fits.filter((d) => d !== own)] : fits;
+  };
   const byDay = new Map<number, Session>();
-  for (const s of [...sessions].sort((a, b) => a.startedAt - b.startedAt)) {
-    const open = [1, 2, 3, 4, 5, 6, 7].filter((d) => !byDay.has(d) && plan.days[d - 1]?.includes(s.routineId));
-    if (open.length === 0) continue;
-    const doneOn = weekday(new Date(s.startedAt));
-    byDay.set(open.includes(doneOn) ? doneOn : open[0], s);
-  }
+  // Standard augmenting-path matching (tiny: at most 7 days).
+  const place = (s: Session, seen: Set<number>): boolean => {
+    for (const d of candidates(s)) {
+      if (seen.has(d)) continue;
+      seen.add(d);
+      const holder = byDay.get(d);
+      if (!holder || place(holder, seen)) {
+        byDay.set(d, s);
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const s of ordered) place(s, new Set());
   return byDay;
+}
+
+/** The plan's days with ids of deleted routines removed. */
+export function liveDays(plan: Plan, routines: Routine[]): string[][] {
+  const ids = new Set(routines.map((r) => r.id));
+  return plan.days.map((d) => d.filter((id) => ids.has(id)));
+}
+
+/** Removes a deleted routine from every plan. */
+export function withoutRoutine(plans: Plan[] | undefined, routineId: string): Plan[] | undefined {
+  return plans?.map((p) => ({ ...p, days: p.days.map((d) => d.filter((id) => id !== routineId)) }));
+}
+
+/**
+ * Sets one choice on a plan day in the editor. Slot 0 is the main workout,
+ * slot 1 the alternative. Clearing the main workout makes it a rest day;
+ * duplicates are dropped.
+ */
+export function setPlanDay(days: string[][], day: number, slot: number, id: string): string[][] {
+  return days.map((d, i) => {
+    if (i !== day) return d;
+    if (slot === 0 && !id) return [];
+    const next = [...d];
+    next[slot] = id;
+    return [...new Set(next.filter(Boolean))];
+  });
 }
 
 /** Status of each day of `plan` for the week containing `today`, plus recent weeks' counts. */
@@ -74,7 +117,8 @@ export function planWeek(
     const { from, to } = weekFrom(today, weeksAgo);
     return app.sessions.filter((s) => s.endedAt && s.startedAt >= from && s.startedAt < to);
   };
-  const assigned = assignSessions(plan, inWeek(0));
+  const days_ = liveDays(plan, app.routines);
+  const assigned = assignSessions(days_, inWeek(0));
 
   const days = DAY_NAMES.map((name, i): PlanDay => {
     const day = i + 1;
@@ -94,7 +138,7 @@ export function planWeek(
     return { day, name, routines, session, status };
   });
 
-  const recent = [3, 2, 1, 0].map((weeksAgo) => ({ weeksAgo, done: assignSessions(plan, inWeek(weeksAgo)).size }));
+  const recent = [3, 2, 1, 0].map((weeksAgo) => ({ weeksAgo, done: assignSessions(days_, inWeek(weeksAgo)).size }));
   return {
     days,
     doneCount: days.filter((d) => d.status === "done").length,
