@@ -33,7 +33,12 @@ export default function RoutinesPage() {
 
   return (
     <>
-      <h1 className="mt-2 text-3xl font-extrabold">Routines</h1>
+      <div className="mt-2 flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold">Routines</h1>
+        <Link href="/settings" aria-label="Settings" className="grid h-10 w-10 place-items-center rounded-full bg-card text-lg text-muted">
+          ⚙
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-muted">Pick one to start</p>
 
       {active && (
