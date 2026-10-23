@@ -53,7 +53,17 @@ function Editor({ id }: { id: string }) {
 
   const clean = exercises
     .filter((e) => e.name.trim())
-    .map((e) => ({ ...e, name: e.name.trim(), sets: Math.max(1, Math.round(e.sets || 1)) }));
+    .map((e) => {
+      const kind = kindOf(e);
+      const out: PlannedExercise = { name: e.name.trim(), sets: Math.max(1, Math.round(e.sets || 1)) };
+      if (e.kind) out.kind = e.kind;
+      if (e.optional) out.optional = e.optional;
+      if (e.target) out.target = e.target;
+      // Keep only the numbers this kind uses (switching a lift to a run drops kg/reps).
+      for (const key of FIELDS[kind]) if (e[key] !== undefined) out[key] = e[key];
+      if (kind === "strength") out.reps = Math.max(1, Math.round(out.reps || 1));
+      return out;
+    });
   const isPlan = Boolean(existing?.plan);
   const back = isPlan ? "/plan" : "/";
   const canSave = name.trim() !== "" && clean.length > 0;
