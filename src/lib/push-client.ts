@@ -8,6 +8,12 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+function sameKey(a: ArrayBuffer | null, b: Uint8Array): boolean {
+  if (!a) return true; // Browser doesn't expose it; assume it matches.
+  const x = new Uint8Array(a);
+  return x.length === b.length && x.every((v, i) => v === b[i]);
+}
+
 export function pushSupported(): boolean {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
@@ -25,13 +31,14 @@ export async function subscribe(): Promise<PushSubscriptionJSON> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") throw new Error("Notifications were not allowed.");
   const reg = await navigator.serviceWorker.ready;
-  const existing = await reg.pushManager.getSubscription();
-  const sub =
-    existing ??
-    (await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""),
-    }));
+  const key = urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "");
+  let existing = await reg.pushManager.getSubscription();
+  // A subscription made with an older server key would be rejected: replace it.
+  if (existing && !sameKey(existing.options.applicationServerKey, key)) {
+    await existing.unsubscribe();
+    existing = null;
+  }
+  const sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
   return sub.toJSON();
 }
 
@@ -62,4 +69,5 @@ export const createReminder = (subscription: PushSubscriptionJSON, time: string)
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }).then((r) => r.id);
 
-export const deleteReminder = (id: string) => call("DELETE", `/api/reminder?id=${encodeURIComponent(id)}`).catch(() => {});
+/** Throws if the server couldn't remove it, so the app keeps the id and can retry. */
+export const deleteReminder = (id: string) => call("DELETE", `/api/reminder?id=${encodeURIComponent(id)}`);
