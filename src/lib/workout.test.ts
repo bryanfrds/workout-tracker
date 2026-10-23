@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Routine, Session } from "./types";
-import { bestSet, countSets, formatClock, formatKg, lastSessionOf, startSession, validOr } from "./workout";
+import { bestSet, countSets, formatClock, formatKg, lastSessionOf, nextSetText, startSession, validOr } from "./workout";
 
 const routine: Routine = {
   id: "push",
@@ -98,5 +98,19 @@ describe("helpers", () => {
     expect(validOr(NaN, 5)).toBe(5);
     expect(validOr(-1, 5)).toBe(5);
     expect(validOr(0, 5)).toBe(0);
+  });
+});
+
+describe("nextSetText", () => {
+  it("describes the first unticked set", () => {
+    const s = startSession(routine, []);
+    s.exercises[0].sets.forEach((x) => (x.done = true));
+    expect(nextSetText(s)).toBe("Next: Dips · set 1 of 2 · BW × 10");
+  });
+
+  it("has a fallback when everything is done", () => {
+    const s = startSession(routine, []);
+    s.exercises.forEach((e) => e.sets.forEach((x) => (x.done = true)));
+    expect(nextSetText(s)).toBe("Back to it");
   });
 });

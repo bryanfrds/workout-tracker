@@ -3,19 +3,7 @@
 import { useEffect } from "react";
 import { cancelRestPush, scheduleRestPush } from "@/lib/push-client";
 import { getState, setState, useAppState } from "@/lib/store";
-import type { Session } from "@/lib/types";
-import { formatKg } from "@/lib/workout";
-
-function nextSetText(s: Session): string {
-  for (const ex of s.exercises) {
-    const i = ex.sets.findIndex((x) => !x.done);
-    if (i >= 0) {
-      const set = ex.sets[i];
-      return `Next: ${ex.name} · set ${i + 1} of ${ex.sets.length} · ${formatKg(set.kg)} × ${set.reps}`;
-    }
-  }
-  return "Back to it";
-}
+import { nextSetText } from "@/lib/workout";
 
 /**
  * Keeps one server-scheduled "rest's over" push in step with the rest timer,
