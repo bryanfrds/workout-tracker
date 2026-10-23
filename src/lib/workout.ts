@@ -149,9 +149,13 @@ export function formatClock(seconds: number): string {
   return h > 0 ? `${h}:${String(mm).padStart(2, "0")}:${ss}` : `${mm}:${ss}`;
 }
 
-/** Parses "1:45", "1:02:30" or plain seconds "105". Returns undefined if it isn't a time. */
+/**
+ * Parses "1:45", "1:02:30" or plain seconds "105". A dot or comma also works as
+ * the separator ("28.30" = 28:30), since the iPhone number keypad has no colon.
+ * Returns undefined if it isn't a time.
+ */
 export function parseClock(text: string): number | undefined {
-  const t = text.trim();
+  const t = text.trim().replace(/[.,]/g, ":");
   if (!t) return undefined;
   if (!/^\d+(:\d{1,2}){0,2}$/.test(t)) return undefined;
   const parts = t.split(":").map(Number);
@@ -194,7 +198,7 @@ export function averageRest(session: Session): number | undefined {
 export function restAfter(session: Session, ex: LoggedExercise, set: LoggedSet, defaultSeconds: number): number {
   if (session.circuit || session.restDay) return 0; // rest as needed
   const kind = kindOf(ex);
-  if (kind === "interval") return isNum(set.rest) && set.rest > 0 ? set.rest : defaultSeconds;
+  if (kind === "interval") return isNum(set.rest) ? set.rest : defaultSeconds;
   if (kind === "strength" || kind === "carry") return defaultSeconds;
   return 0;
 }

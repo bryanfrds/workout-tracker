@@ -30,8 +30,9 @@ export default function NumberInput({ value, onChange, duration, ...rest }: Prop
     <input
       {...rest}
       type="text"
-      inputMode={duration ? "numeric" : "decimal"}
-      placeholder={rest.placeholder ?? (duration ? "m:ss" : undefined)}
+      // Decimal keypad for times too: it has a "." key, which parseClock reads as ":".
+      inputMode="decimal"
+      placeholder={rest.placeholder ?? (duration ? "m.ss" : undefined)}
       value={draft ?? shown}
       onChange={(e) => {
         setDraft(e.target.value);
