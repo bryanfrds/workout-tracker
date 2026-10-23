@@ -1,4 +1,4 @@
-import type { AppState, Routine, Session } from "./types";
+import type { Routine } from "./types";
 
 export const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -112,78 +112,8 @@ export function weekday(d = new Date()): number {
   return ((d.getDay() + 6) % 7) + 1;
 }
 
-/** Key for a skipped plan day, e.g. "2026-10-19:3". */
-export function skipKey(week: Date, day: number): string {
+/** Key for a skipped plan day, e.g. "ppl:2026-10-19:3". */
+export function skipKey(planId: string, week: Date, day: number): string {
   const ymd = `${week.getFullYear()}-${String(week.getMonth() + 1).padStart(2, "0")}-${String(week.getDate()).padStart(2, "0")}`;
-  return `${ymd}:${day}`;
-}
-
-export type DayStatus = "done" | "skipped" | "today" | "missed" | "upcoming";
-
-export type PlanDay = {
-  day: number;
-  name: string;
-  routines: Routine[];
-  /** The finished session that completed this day this week, if any. */
-  session?: Session;
-  status: DayStatus;
-};
-
-/** Monday 00:00 of the week `weeksAgo` weeks before the one containing `today` (calendar-based, so DST-safe). */
-function weekFrom(today: Date, weeksAgo: number): { from: number; to: number } {
-  const start = weekStart(today);
-  const at = (k: number) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7 * k).getTime();
-  return { from: at(-weeksAgo), to: at(-weeksAgo + 1) };
-}
-
-/**
- * Status of each plan day for the week containing `today`. A day is done when
- * any of its routines was finished this week (on any day), which wins over a skip.
- */
-export function planWeek(
-  app: Pick<AppState, "routines" | "sessions" | "planSkips">,
-  today: Date,
-): { days: PlanDay[]; doneCount: number; recent: { weeksAgo: number; done: number }[] } {
-  const plan = app.routines.filter((r) => r.plan === "hyrox");
-  const skips = new Set(app.planSkips ?? []);
-  const todayNum = weekday(today);
-  const start = weekStart(today);
-  const inWeek = (weeksAgo: number) => {
-    const { from, to } = weekFrom(today, weeksAgo);
-    return app.sessions.filter((s) => s.endedAt && s.startedAt >= from && s.startedAt < to);
-  };
-  const thisWeek = inWeek(0);
-
-  const days = DAY_NAMES.map((name, i): PlanDay => {
-    const day = i + 1;
-    const routines = plan.filter((r) => r.day === day);
-    const session = thisWeek.find((s) => routines.some((r) => r.id === s.routineId));
-    const status: DayStatus = session
-      ? "done"
-      : skips.has(skipKey(start, day))
-        ? "skipped"
-        : day === todayNum
-          ? "today"
-          : day < todayNum
-            ? "missed"
-            : "upcoming";
-    return { day, name, routines, session, status };
-  });
-
-  // Last four weeks, oldest first: how many distinct plan days were done.
-  const recent = [3, 2, 1, 0].map((weeksAgo) => {
-    const daysDone = new Set(
-      inWeek(weeksAgo)
-        .map((s) => plan.find((r) => r.id === s.routineId)?.day)
-        .filter((d): d is number => d !== undefined),
-    );
-    return { weeksAgo, done: daysDone.size };
-  });
-
-  return { days, doneCount: days.filter((d) => d.status === "done").length, recent };
-}
-
-/** A rest day logged without any mobility ticked. */
-export function isPlainRestDay(s: Session): boolean {
-  return Boolean(s.restDay) && !s.exercises.some((e) => e.sets.some((x) => x.done));
+  return `${planId}:${ymd}:${day}`;
 }

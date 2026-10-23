@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import PlanPicker from "@/components/PlanPicker";
+import TodayCard from "@/components/TodayCard";
+import { activePlan } from "@/lib/plans";
 import { setState, useAppState } from "@/lib/store";
+import { useToday } from "@/lib/use-today";
 import { countSets, lastSessionOf, startSession } from "@/lib/workout";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -17,10 +21,12 @@ function lastDone(ts?: number): string {
 
 export default function RoutinesPage() {
   const app = useAppState();
+  const today = useToday();
   const router = useRouter();
-  if (!app) return null;
+  if (!app || !today) return null;
 
   const active = app.active;
+  const plan = activePlan(app);
 
   function start(routineId: string) {
     setState((s) => {
@@ -39,7 +45,8 @@ export default function RoutinesPage() {
           ⚙
         </Link>
       </div>
-      <p className="mt-1 text-sm text-muted">Pick one to start</p>
+      <p className="mt-1 text-sm text-muted">Pick the plan you&apos;re following</p>
+      <PlanPicker plans={app.plans ?? []} activeId={plan?.id} />
 
       {active && (
         <Link href="/workout" className="mt-4 block rounded-2xl bg-accent p-4 text-accent-ink">
@@ -51,13 +58,9 @@ export default function RoutinesPage() {
         </Link>
       )}
 
-      <Link href="/plan" className="mt-4 flex items-center justify-between rounded-2xl bg-card p-4">
-        <span>
-          <span className="block text-xs text-muted">Training plan</span>
-          <span className="block font-bold">HYROX week</span>
-        </span>
-        <span className="text-muted">›</span>
-      </Link>
+      {plan && <TodayCard app={app} plan={plan} today={today} />}
+
+      <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-muted">All workouts</h2>
 
       {app.routines.filter((r) => !r.plan).map((r) => {
         const sets = r.exercises.reduce((n, e) => n + e.sets, 0);

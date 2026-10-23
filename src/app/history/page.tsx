@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppState } from "@/lib/store";
-import { isPlainRestDay } from "@/lib/hyrox";
+import { isPlainRestDay } from "@/lib/plans";
 import type { Session } from "@/lib/types";
 import { averageRest, bestSet, describeSet, formatClock, kindOf } from "@/lib/workout";
 
