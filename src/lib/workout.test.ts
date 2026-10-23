@@ -88,6 +88,7 @@ describe("helpers", () => {
   it("formats weights and clocks", () => {
     expect(formatKg(0)).toBe("BW");
     expect(formatKg(62.5)).toBe("62.5 kg");
+    expect(formatKg(null as unknown as number)).toBe("–");
     expect(formatClock(90)).toBe("1:30");
     expect(formatClock(-3)).toBe("0:00");
   });

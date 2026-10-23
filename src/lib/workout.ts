@@ -60,6 +60,7 @@ export function countSets(session: Session): { done: number; total: number } {
 }
 
 export function formatKg(kg: number): string {
+  if (!Number.isFinite(kg)) return "–";
   return kg === 0 ? "BW" : `${kg} kg`;
 }
 
