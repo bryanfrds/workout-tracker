@@ -4,6 +4,11 @@ export function newId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+/** `n` if it's a usable non-negative number (older saves may hold null), else `fallback`. */
+export function validOr(n: number | null | undefined, fallback: number): number {
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 /** Most recent finished session of this routine, if any. */
 export function lastSessionOf(sessions: Session[], routineId: string): Session | undefined {
   return sessions
@@ -35,7 +40,7 @@ export function startSession(routine: Routine, sessions: Session[], now = Date.n
         name: planned.name,
         sets: Array.from({ length: planned.sets }, (_, i) => {
           const p = prev?.sets[i] ?? prev?.sets.at(-1);
-          return { kg: p?.kg ?? planned.kg, reps: p?.reps ?? planned.reps, done: false };
+          return { kg: validOr(p?.kg, planned.kg), reps: validOr(p?.reps, planned.reps), done: false };
         }),
       };
     }),
