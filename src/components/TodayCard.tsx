@@ -31,7 +31,11 @@ export default function TodayCard({ app, plan, today }: { app: AppState; plan: P
       {d.status === "done" && d.session && (
         <>
           <p className="mt-1 text-lg font-bold">✓ {d.session.routineName}</p>
-          <p className="text-sm text-muted">Done for today. Nice.</p>
+          <p className="text-sm text-muted">
+            {new Date(d.session.startedAt).toDateString() === today.toDateString()
+              ? "Done for today. Nice."
+              : `Done early on ${new Date(d.session.startedAt).toLocaleDateString(undefined, { weekday: "long" })}.`}
+          </p>
         </>
       )}
 
