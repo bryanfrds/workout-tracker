@@ -51,6 +51,13 @@ describe("push", () => {
     await fire(listeners.push, { data });
     expect(self.registration.showNotification).toHaveBeenCalledWith("Workout", expect.objectContaining({ body: "plain text" }));
   });
+
+
+  it("treats a literal null payload as empty", async () => {
+    const { self, listeners } = loadWorker();
+    await fire(listeners.push, { data: { json: () => null } });
+    expect(self.registration.showNotification).toHaveBeenCalledWith("Workout", expect.objectContaining({ body: "" }));
+  });
 });
 
 describe("notificationclick", () => {
