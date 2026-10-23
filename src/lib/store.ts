@@ -2,12 +2,14 @@
 
 import { useSyncExternalStore } from "react";
 import { HYROX_ROUTINES, withPlanRoutines } from "./hyrox";
+import { SEED_PLANS, withPlans } from "./plans";
 import type { AppState } from "./types";
 
 const KEY = "workout-tracker:v1";
 
 export const SEED: AppState = {
   restSeconds: 90,
+  activePlanId: "hyrox",
   sessions: [],
   routines: [
     {
@@ -41,6 +43,7 @@ export const SEED: AppState = {
     },
     ...HYROX_ROUTINES,
   ],
+  plans: SEED_PLANS,
 };
 
 let state: AppState | null = null;
@@ -50,9 +53,9 @@ function load(): AppState {
   if (state) return state;
   try {
     const raw = localStorage.getItem(KEY);
-    const saved = raw ? { ...SEED, ...(JSON.parse(raw) as AppState) } : SEED;
-    // Saves from before the HYROX plan existed get its routines added.
-    state = { ...saved, routines: withPlanRoutines(saved.routines) };
+    const saved = raw ? { ...SEED, plans: undefined, ...(JSON.parse(raw) as AppState) } : SEED;
+    // Saves from before the HYROX plan / multiple plans existed get them added.
+    state = withPlans({ ...saved, routines: withPlanRoutines(saved.routines) });
   } catch {
     state = SEED;
   }

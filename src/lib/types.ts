@@ -83,6 +83,14 @@ export type Session = {
   rpe?: number;
 };
 
+/** A weekly schedule: for each day Mon–Sun, the routine ids to choose from (none = rest). */
+export type Plan = {
+  id: string;
+  name: string;
+  /** Seven entries, Monday first. */
+  days: string[][];
+};
+
 export type Notifications = {
   subscription: PushSubscriptionJSON;
   /** Daily "time to train" reminder, e.g. "18:30", and its server schedule id. */
@@ -97,6 +105,9 @@ export type AppState = {
   notifications?: Notifications;
   /** The scheduled "rest's over" push for the current rest, so it can be cancelled. */
   restPush?: { endsAt: number; id: string };
-  /** Plan days skipped, as "<week start date>:<day>", e.g. "2026-10-19:3". */
+  plans?: Plan[];
+  /** The plan shown on the home screen and Plan tab. */
+  activePlanId?: string;
+  /** Plan days skipped, as "<plan id>:<week start date>:<day>", e.g. "ppl:2026-10-19:3". */
   planSkips?: string[];
 };
