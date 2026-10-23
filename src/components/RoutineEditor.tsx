@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getState, setState, useAppState } from "@/lib/store";
 import type { ExerciseKind, PlannedExercise } from "@/lib/types";
 import NumberInput from "@/components/NumberInput";
+import { withoutRoutine } from "@/lib/plans";
 import { DURATION_FIELDS, FIELD_LABELS, FIELDS, KIND_LABELS, kindOf, newId, type MetricKey } from "@/lib/workout";
 
 const BLANK: PlannedExercise = { name: "", sets: 3, kg: 20, reps: 10 };
@@ -82,7 +83,11 @@ function Editor({ id }: { id: string }) {
 
   function remove() {
     if (!existing) return;
-    setState((s) => ({ ...s, routines: s.routines.filter((r) => r.id !== existing.id) }));
+    setState((s) => ({
+      ...s,
+      routines: s.routines.filter((r) => r.id !== existing.id),
+      plans: withoutRoutine(s.plans, existing.id),
+    }));
     router.push("/");
   }
 
