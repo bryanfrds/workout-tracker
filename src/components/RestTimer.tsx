@@ -20,7 +20,8 @@ export default function RestTimer({ endsAt, onChange }: Props) {
 
   useEffect(() => {
     if (left <= 0) {
-      navigator.vibrate?.(300);
+      // Don't buzz when reopening the app long after the rest ended.
+      if (left > -2) navigator.vibrate?.(300);
       onChange(undefined);
     }
   }, [left, onChange]);
