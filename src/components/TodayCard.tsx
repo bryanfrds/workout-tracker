@@ -2,89 +2,137 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { weekday } from "@/lib/hyrox";
 import { logRestDay, startRoutine, toggleSkip } from "@/lib/plan-actions";
-import { planWeek } from "@/lib/plans";
-import type { AppState, Plan } from "@/lib/types";
+import type { PlanDay } from "@/lib/plans";
+import type { AppState, Plan, Routine } from "@/lib/types";
 
-/** Today's workout from the plan you're following, with a start button. */
-export default function TodayCard({ app, plan, today }: { app: AppState; plan: Plan; today: Date }) {
+/** "5 exercises · 3 rounds" for a routine. */
+export function routineMeta(r: Routine): string[] {
+  const bits = [`${r.exercises.length} exercise${r.exercises.length === 1 ? "" : "s"}`];
+  if (r.circuit) bits.push(`${r.exercises[0]?.sets ?? 0} rounds`);
+  else bits.push(`${r.exercises.reduce((n, e) => n + e.sets, 0)} sets`);
+  return bits;
+}
+
+/** The big card for one plan day: what it is, and a button to start it. */
+export function DayCard({
+  app,
+  plan,
+  today,
+  day,
+  eyebrow,
+  details,
+}: {
+  app: AppState;
+  plan: Plan;
+  today: Date;
+  day: PlanDay;
+  eyebrow: React.ReactNode;
+  /** Extra content for the chosen routine (e.g. its exercise list), shown above the buttons. */
+  details?: (routine: Routine) => React.ReactNode;
+}) {
   const router = useRouter();
-  const d = planWeek(app, plan, today).days[weekday(today) - 1];
+  const [pick, setPick] = useState(0);
+  const routine = day.routines[Math.min(pick, day.routines.length - 1)];
+  const isToday = day.day === weekday(today);
+
+  const start = (r: Routine) => {
+    startRoutine(r);
+    router.push("/workout");
+  };
 
   return (
-    <section className="mt-3 rounded-2xl bg-card p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Today · {d.name}</h2>
-        <Link href="/plan" className="shrink-0 text-sm text-muted">
-          See the week ›
-        </Link>
-      </div>
+    <section className="rounded-[22px] bg-card p-[18px]">
+      {eyebrow}
 
-      {d.status === "rest" && (
+      {day.status === "rest" && (
         <>
-          <p className="mt-1 text-lg font-bold">Rest day</p>
-          <p className="text-sm text-muted">Nothing planned. Recover, or pick any workout below.</p>
+          <h2 className="mt-1.5 text-[22px] font-extrabold">Rest day</h2>
+          <p className="mt-1 text-sm text-muted">Nothing planned. Recover, or start any workout below.</p>
         </>
       )}
 
-      {d.status === "done" && d.session && (
+      {day.status === "done" && day.session && (
         <>
-          <p className="mt-1 text-lg font-bold">✓ {d.session.routineName}</p>
-          <p className="text-sm text-muted">
-            {new Date(d.session.startedAt).toDateString() === today.toDateString()
+          <h2 className="mt-1.5 text-[22px] font-extrabold">✓ {day.session.routineName}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {new Date(day.session.startedAt).toDateString() === today.toDateString()
               ? "Done for today. Nice."
-              : `Done early on ${new Date(d.session.startedAt).toLocaleDateString(undefined, { weekday: "long" })}.`}
+              : `Done on ${new Date(day.session.startedAt).toLocaleDateString(undefined, { weekday: "long" })}.`}
           </p>
         </>
       )}
 
-      {d.status === "skipped" && (
+      {routine && day.status !== "rest" && day.status !== "done" && (
         <>
-          <p className="mt-1 text-lg font-bold text-muted line-through">{d.routines.map((r) => r.name).join(" or ")}</p>
-          <button onClick={() => toggleSkip(plan.id, today, d.day)} className="mt-1 text-sm text-muted underline">
-            Undo skip
-          </button>
-        </>
-      )}
+          <h2 className={`mt-1.5 text-[22px] font-extrabold ${day.status === "skipped" ? "text-muted line-through" : ""}`}>
+            {routine.name}
+          </h2>
+          {routine.summary && <p className="mt-1 text-sm leading-snug text-muted">{routine.summary}</p>}
 
-      {(d.status === "today" || d.status === "missed" || d.status === "upcoming") &&
-        d.routines.map((r, i) => (
-          <div key={r.id} className={i > 0 ? "mt-4 border-t border-line pt-4" : "mt-1"}>
-            {i > 0 && <p className="mb-1 text-xs text-muted">or</p>}
-            <p className="text-lg font-bold">{r.name}</p>
-            {r.summary && <p className="text-sm text-muted">{r.summary}</p>}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {r.exercises.map((e) => (
-                <span key={e.name} className="rounded-lg bg-card2 px-2 py-1 text-xs text-[#c9c9d1]">
-                  {e.name}
-                </span>
+          {day.routines.length > 1 && (
+            <div className="mt-3 flex gap-2" role="group" aria-label="Choose one">
+              {day.routines.map((r, i) => (
+                <button
+                  key={r.id}
+                  onClick={() => setPick(i)}
+                  aria-pressed={r.id === routine.id}
+                  className={`flex-1 rounded-xl border-2 p-2.5 text-sm font-semibold ${
+                    r.id === routine.id ? "border-accent text-accent" : "border-transparent bg-card2"
+                  }`}
+                >
+                  {r.name}
+                </button>
               ))}
             </div>
-            <div className="mt-3 flex gap-2">
-              {app.active ? (
-                <Link href="/workout" className="flex-1 rounded-xl bg-card2 p-3 text-center text-sm font-semibold">
-                  Workout in progress
-                </Link>
-              ) : (
-                <button
-                  onClick={() => {
-                    startRoutine(r);
-                    router.push("/workout");
-                  }}
-                  className="flex-1 rounded-xl bg-accent p-3.5 text-[15px] font-bold text-accent-ink"
-                >
-                  {r.restDay ? "Log mobility" : "Start workout"}
-                </button>
-              )}
-              {r.restDay && (
-                <button onClick={() => logRestDay(r)} className="flex-1 rounded-xl bg-card2 p-3 text-sm font-semibold">
+          )}
+
+          <div className="mt-3 flex gap-3.5 text-[13px] text-text2">
+            {routineMeta(routine).map((m) => (
+              <span key={m}>{m}</span>
+            ))}
+          </div>
+
+          {details?.(routine)}
+
+          {day.status === "skipped" ? (
+            <button
+              onClick={() => toggleSkip(plan.id, today, day.day)}
+              className="mt-4 w-full rounded-[14px] bg-card2 p-3 text-sm font-semibold"
+            >
+              Undo skip
+            </button>
+          ) : app.active ? (
+            <Link href="/workout" className="mt-4 block rounded-[14px] bg-card2 p-3.5 text-center font-semibold">
+              Workout in progress ›
+            </Link>
+          ) : (
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => start(routine)}
+                className="flex-1 rounded-[14px] bg-accent p-[15px] text-base font-bold text-accent-ink"
+              >
+                {routine.restDay ? "Log mobility" : "Start workout"}
+              </button>
+              {routine.restDay && (
+                <button onClick={() => logRestDay(routine)} className="flex-1 rounded-[14px] bg-card2 p-3 text-sm font-semibold">
                   Log rest day
                 </button>
               )}
+              {!isToday && !routine.restDay && (
+                <button
+                  onClick={() => toggleSkip(plan.id, today, day.day)}
+                  className="rounded-[14px] bg-card2 px-4 text-sm font-semibold"
+                >
+                  Skip
+                </button>
+              )}
             </div>
-          </div>
-        ))}
+          )}
+        </>
+      )}
     </section>
   );
 }
