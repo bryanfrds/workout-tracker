@@ -94,7 +94,7 @@ function Editor({ id }: { id: string }) {
   return (
     <>
       <button onClick={() => router.push(back)} className="mt-2 text-sm text-muted">
-        ‹ {isPlan ? "Plan" : "Routines"}
+        ‹ {isPlan ? "Plan" : "Home"}
       </button>
       <h1 className="mt-2 text-3xl font-extrabold">{existing ? "Edit routine" : "New routine"}</h1>
 

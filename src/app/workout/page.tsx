@@ -31,14 +31,9 @@ export default function WorkoutPage() {
         <h1 className="mt-2 text-3xl font-extrabold">Workout</h1>
         <div className="mt-6 rounded-2xl bg-card p-6 text-center">
           <p className="text-muted">No workout running.</p>
-          <div className="mt-4 flex justify-center gap-2">
-            <Link href="/plan" className="rounded-xl bg-accent px-5 py-3 font-bold text-accent-ink">
-              HYROX plan
-            </Link>
-            <Link href="/" className="rounded-xl bg-card2 px-5 py-3 font-bold">
-              Routines
-            </Link>
-          </div>
+          <Link href="/" className="mt-4 inline-block rounded-xl bg-accent px-5 py-3 font-bold text-accent-ink">
+            See today&apos;s workout
+          </Link>
         </div>
       </>
     );
