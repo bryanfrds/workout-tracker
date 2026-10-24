@@ -51,7 +51,8 @@ export default function PlanDropdown({ plans, active }: { plans: Plan[]; active?
       </button>
 
       {open && (
-        <div id="plan-menu" className="absolute left-0 top-11 z-30 w-64 rounded-2xl border border-line bg-card p-1.5 shadow-2xl">
+        // tabIndex lets Safari (which doesn't focus clicked buttons) keep focus inside, so blur doesn't close it mid-click.
+        <div id="plan-menu" tabIndex={-1} className="absolute left-0 top-11 z-30 w-64 rounded-2xl border border-line bg-card p-1.5 shadow-2xl">
           {plans.map((p) => (
             <button
               key={p.id}
