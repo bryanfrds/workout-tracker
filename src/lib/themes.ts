@@ -15,3 +15,9 @@ export const DEFAULT_THEME: ThemeId = "ocean";
 export function themeOf(id: string | undefined) {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];
 }
+
+/** Small separate key so the pre-paint script doesn't parse all workout history. */
+export const THEME_KEY = "workout-tracker:theme";
+
+/** Light needs dark status-bar text on iPhone; the others draw white text over the page. */
+export const statusBarStyle = (id: string | undefined) => (id === "light" ? "default" : "black-translucent");

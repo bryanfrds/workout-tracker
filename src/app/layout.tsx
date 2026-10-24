@@ -12,7 +12,8 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const THEME_SCRIPT = `try{var t=JSON.parse(localStorage.getItem("workout-tracker:v1")||"{}").theme;if(t)document.documentElement.dataset.theme=t}catch(e){}`;
+// Keep in step with THEME_KEY and statusBarStyle in src/lib/themes.ts.
+const THEME_SCRIPT = `try{var t=localStorage.getItem("workout-tracker:theme");if(t){document.documentElement.dataset.theme=t;if(t==="light"){var m=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(m)m.content="default"}}}catch(e){}`;
 
 export const metadata: Metadata = {
   title: "Workout",
