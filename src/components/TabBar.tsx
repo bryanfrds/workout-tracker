@@ -15,7 +15,9 @@ export default function TabBar() {
   const isOn = (href: string) => (href === "/" ? path === "/" || path.startsWith("/routine") : href === "/plan" ? path === "/plan" || path.startsWith("/plans") : path.startsWith(href));
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-bar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    // The ::after strip carries the bar colour below its bottom edge: installed iPhone apps can
+    // place fixed elements short of the screen bottom, which otherwise shows a dark gap.
+    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-bar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-bar after:content-['']">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around text-[11px]">
         {TABS.map((t) => (
           <Link
