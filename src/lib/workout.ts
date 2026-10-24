@@ -214,3 +214,14 @@ export function nextSetText(s: Session): string {
   }
   return "Back to it";
 }
+
+/** Short facts for a routine card, e.g. ["5 exercises", "3 rounds"]. */
+export function routineMeta(r: Routine): string[] {
+  const bits = [`${r.exercises.length} exercise${r.exercises.length === 1 ? "" : "s"}`];
+  if (r.circuit) bits.push(`${r.exercises[0]?.sets ?? 0} rounds`);
+  else {
+    const sets = r.exercises.reduce((n, e) => n + e.sets, 0);
+    bits.push(`${sets} set${sets === 1 ? "" : "s"}`);
+  }
+  return bits;
+}
