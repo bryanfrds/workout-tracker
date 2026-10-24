@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { createReminder, deleteReminder, isInstalled, pushSupported, subscribe, unsubscribe } from "@/lib/push-client";
 import { setState, useAppState } from "@/lib/store";
+import { THEMES, themeOf } from "@/lib/themes";
 
 const REST_OPTIONS = [60, 90, 120, 180];
 
@@ -65,11 +66,35 @@ export default function SettingsPage() {
   return (
     <>
       <Link href="/" className="mt-2 inline-block text-sm text-muted">
-        ‹ Routines
+        ‹ Home
       </Link>
       <h1 className="mt-2 text-3xl font-extrabold">Settings</h1>
 
       <section className="mt-4 rounded-2xl bg-card p-4">
+        <h2 className="font-bold">Colour theme</h2>
+        <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label="Colour theme">
+          {THEMES.map((t) => {
+            const on = themeOf(app.theme).id === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setState((s) => ({ ...s, theme: t.id }))}
+                aria-pressed={on}
+                className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-2 text-xs font-semibold ${
+                  on ? "border-accent" : "border-transparent bg-card2"
+                }`}
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-full" style={{ background: t.card, outline: `1px solid ${t.bg}` }}>
+                  <span className="h-3.5 w-3.5 rounded-full" style={{ background: t.accent }} />
+                </span>
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mt-3 rounded-2xl bg-card p-4">
         <h2 className="font-bold">Rest between sets</h2>
         <div className="mt-3 flex gap-2">
           {REST_OPTIONS.map((sec) => (
