@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { HYROX_ROUTINES, withPlanRoutines } from "./hyrox";
 import { SEED_PLANS, withPlans } from "./plans";
+import { DEFAULT_THEME } from "./themes";
 import type { AppState } from "./types";
 
 const KEY = "workout-tracker:v1";
@@ -10,6 +11,7 @@ const KEY = "workout-tracker:v1";
 export const SEED: AppState = {
   restSeconds: 90,
   activePlanId: "hyrox",
+  theme: DEFAULT_THEME,
   sessions: [],
   routines: [
     {

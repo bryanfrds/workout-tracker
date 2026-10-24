@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import RestPushSync from "@/components/RestPushSync";
+import ThemeSync from "@/components/ThemeSync";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -11,6 +12,8 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const THEME_SCRIPT = `try{var t=JSON.parse(localStorage.getItem("workout-tracker:v1")||"{}").theme;if(t)document.documentElement.dataset.theme=t}catch(e){}`;
+
 export const metadata: Metadata = {
   title: "Workout",
   description: "Tick off your sets, rest between them, see your history.",
@@ -18,13 +21,17 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0d",
+  themeColor: "#07111f",
   viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Apply the saved theme before first paint so there's no colour flash. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full font-sans">
         <main className="mx-auto max-w-md px-4 pt-[max(env(safe-area-inset-top),24px)] pb-32">
           {children}
@@ -34,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <RegisterServiceWorker />
         <RestPushSync />
+        <ThemeSync />
       </body>
     </html>
   );
