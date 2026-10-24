@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import PlanPicker from "@/components/PlanPicker";
-import TodayCard from "@/components/TodayCard";
-import { activePlan } from "@/lib/plans";
-import { setState, useAppState } from "@/lib/store";
+import PlanDropdown from "@/components/PlanDropdown";
+import { DayCard } from "@/components/TodayCard";
+import { weekday } from "@/lib/hyrox";
+import { startRoutine } from "@/lib/plan-actions";
+import { activePlan, planWeek, upcomingDays } from "@/lib/plans";
+import { useAppState } from "@/lib/store";
 import { useToday } from "@/lib/use-today";
-import { countSets, lastSessionOf, startSession } from "@/lib/workout";
+import { countSets, lastSessionOf } from "@/lib/workout";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -15,11 +17,13 @@ function lastDone(ts?: number): string {
   if (!ts) return "not done yet";
   const days = Math.floor((Date.now() - ts) / DAY);
   if (days === 0) return "last done today";
-  if (days < 7) return `last done ${new Date(ts).toLocaleDateString(undefined, { weekday: "short" })}`;
-  return `last done ${days} days ago`;
+  if (days < 7) return `last ${new Date(ts).toLocaleDateString(undefined, { weekday: "short" })}`;
+  return `last ${days} days ago`;
 }
 
-export default function RoutinesPage() {
+const eyebrow = "text-xs font-semibold uppercase tracking-[0.05em] text-muted";
+
+export default function HomePage() {
   const app = useAppState();
   const today = useToday();
   const router = useRouter();
@@ -27,26 +31,28 @@ export default function RoutinesPage() {
 
   const active = app.active;
   const plan = activePlan(app);
-
-  function start(routineId: string) {
-    setState((s) => {
-      const routine = s.routines.find((r) => r.id === routineId);
-      if (!routine || s.active) return s;
-      return { ...s, active: startSession(routine, s.sessions) };
-    });
-    router.push("/workout");
-  }
+  const week = plan && planWeek(app, plan, today);
+  const todayNum = weekday(today);
+  const upNext = week ? upcomingDays(todayNum).map((d) => week.days[d - 1]) : [];
+  const others = app.routines.filter((r) => !r.plan);
 
   return (
     <>
       <div className="mt-2 flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold">Routines</h1>
-        <Link href="/settings" aria-label="Settings" className="grid h-10 w-10 place-items-center rounded-full bg-card text-lg text-muted">
+        <span className={eyebrow}>
+          {today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" })}
+        </span>
+        <Link href="/settings" aria-label="Settings" className="grid h-[38px] w-[38px] place-items-center rounded-full bg-card text-muted">
           ⚙
         </Link>
       </div>
-      <p className="mt-1 text-sm text-muted">Pick the plan you&apos;re following</p>
-      <PlanPicker plans={app.plans ?? []} activeId={plan?.id} />
+
+      <PlanDropdown plans={app.plans ?? []} active={plan} />
+      {week && (
+        <p className="mt-0.5 text-[13px] text-muted">
+          {week.doneCount} of {week.trainingDays} done this week
+        </p>
+      )}
 
       {active && (
         <Link href="/workout" className="mt-4 block rounded-2xl bg-accent p-4 text-accent-ink">
@@ -58,52 +64,81 @@ export default function RoutinesPage() {
         </Link>
       )}
 
-      {plan && <TodayCard app={app} plan={plan} today={today} />}
+      {plan && week && (
+        <div className="mt-4">
+          <DayCard
+            key={`${plan.id}-${todayNum}`}
+            app={app}
+            plan={plan}
+            today={today}
+            day={week.days[todayNum - 1]}
+            allowSkip={false}
+            eyebrow={<span className={`${eyebrow} !text-accent`}>Today</span>}
+          />
+        </div>
+      )}
 
-      <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-muted">All workouts</h2>
-
-      {app.routines.filter((r) => !r.plan).map((r) => {
-        const sets = r.exercises.reduce((n, e) => n + e.sets, 0);
-        const last = lastSessionOf(app.sessions, r.id);
-        return (
-          <div key={r.id} className="mt-3 rounded-2xl bg-card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-[17px] font-bold">{r.name}</h2>
-                <p className="mt-1 text-sm text-muted">
-                  {r.exercises.length} exercises · {sets} sets · {lastDone(last?.startedAt)}
-                </p>
-              </div>
-              <Link href={`/routine/${r.id}`} className="text-sm text-muted underline-offset-2 hover:underline">
-                Edit
-              </Link>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {r.exercises.map((e) => (
-                <span key={e.name} className="rounded-lg bg-card2 px-2 py-1 text-xs text-[#c9c9d1]">
-                  {e.name}
+      {upNext.length > 0 && (
+        <>
+          <div className="mx-0.5 mb-2 mt-6 flex items-baseline justify-between">
+            <span className={eyebrow}>Coming up</span>
+            <Link href="/plan" className="text-[13px] text-muted">
+              Full week ›
+            </Link>
+          </div>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
+            {upNext.map((d) => (
+              <Link
+                key={d.day}
+                href={`/plan?day=${d.day}`}
+                className="min-w-24 shrink-0 rounded-[14px] bg-card px-3 py-2.5"
+              >
+                <span className="block text-[11px] text-muted">{d.name.slice(0, 3)}</span>
+                <span className="block text-[13px] font-bold">
+                  {d.routines.length ? d.routines.map((r) => r.name).join(" or ") : "Rest"}
                 </span>
-              ))}
-            </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="mx-0.5 mb-2 mt-6 flex items-baseline justify-between">
+        <span className={eyebrow}>Other workouts</span>
+        <Link href="/routine/new" className="text-[13px] text-muted">
+          + New
+        </Link>
+      </div>
+      <div className="overflow-hidden rounded-[18px] bg-card">
+        {others.length === 0 && <p className="p-4 text-sm text-muted">No other workouts yet.</p>}
+        {others.map((r, i) => (
+          <div key={r.id} className={`flex items-center gap-3 px-3.5 py-3 ${i > 0 ? "border-t border-line" : ""}`}>
+            <Link href={`/routine/${r.id}`} className="flex min-w-0 flex-1 items-center gap-3" aria-label={`Edit ${r.name}`}>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-card2 text-sm font-bold text-accent">
+                {r.name.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[15px] font-bold">{r.name}</span>
+                <span className="block text-xs text-muted">
+                  {r.exercises.length} exercises · {lastDone(lastSessionOf(app.sessions, r.id)?.startedAt)}
+                </span>
+              </span>
+            </Link>
             {!active && (
               <button
-                onClick={() => start(r.id)}
-                disabled={r.exercises.length === 0}
-                className="mt-4 w-full rounded-xl bg-accent p-3.5 text-[15px] font-bold text-accent-ink disabled:opacity-40"
+                onClick={() => {
+                  startRoutine(r);
+                  router.push("/workout");
+                }}
+                aria-label={`Start ${r.name}`}
+                className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full bg-accent text-xs font-extrabold text-accent-ink"
               >
-                Start workout
+                ▶
               </button>
             )}
           </div>
-        );
-      })}
-
-      <Link
-        href="/routine/new"
-        className="mt-3 block rounded-2xl border-[1.5px] border-dashed border-line p-4 text-center text-muted"
-      >
-        + New routine
-      </Link>
+        ))}
+      </div>
     </>
   );
 }

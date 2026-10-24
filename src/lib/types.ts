@@ -108,6 +108,8 @@ export type AppState = {
   plans?: Plan[];
   /** The plan shown on the home screen and Plan tab. */
   activePlanId?: string;
+  /** Colour theme id (see themes.ts). */
+  theme?: string;
   /** Plan days skipped, as "<plan id>:<week start date>:<day>", e.g. "ppl:2026-10-19:3". */
   planSkips?: string[];
 };

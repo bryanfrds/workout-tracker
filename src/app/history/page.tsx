@@ -68,7 +68,7 @@ export default function HistoryPage() {
                 {!isPlainRestDay(s) && ` · ${minutes} min`}
               </span>
             </div>
-            <ul className="mt-2 text-sm text-[#c9c9d1]">
+            <ul className="mt-2 text-sm text-text2">
               {s.restDay && s.exercises.every((e) => !e.sets.some((x) => x.done)) && (
                 <li className="border-t border-line py-1.5 text-muted">Rest day</li>
               )}
@@ -108,7 +108,7 @@ export default function HistoryPage() {
               ].filter(Boolean);
               return bits.length > 0 ? <p className="mt-2 text-xs text-muted">{bits.join(" · ")}</p> : null;
             })()}
-            {s.notes && <p className="mt-2 rounded-lg bg-card2 p-2 text-sm text-[#c9c9d1]">{s.notes}</p>}
+            {s.notes && <p className="mt-2 rounded-lg bg-card2 p-2 text-sm text-text2">{s.notes}</p>}
           </div>
         );
       })}

@@ -2,89 +2,151 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { weekday } from "@/lib/hyrox";
+import { useState } from "react";
 import { logRestDay, startRoutine, toggleSkip } from "@/lib/plan-actions";
-import { planWeek } from "@/lib/plans";
-import type { AppState, Plan } from "@/lib/types";
+import { dayActions, type DayAction, type PlanDay } from "@/lib/plans";
+import type { AppState, Plan, Routine } from "@/lib/types";
+import { routineMeta } from "@/lib/workout";
 
-/** Today's workout from the plan you're following, with a start button. */
-export default function TodayCard({ app, plan, today }: { app: AppState; plan: Plan; today: Date }) {
+/** The big card for one plan day: what it is, and buttons to start, log or skip it. */
+export function DayCard({
+  app,
+  plan,
+  today,
+  day,
+  eyebrow,
+  details,
+  allowSkip = true,
+}: {
+  app: AppState;
+  plan: Plan;
+  today: Date;
+  day: PlanDay;
+  eyebrow: React.ReactNode;
+  /** Extra content for the chosen routine (e.g. its exercise list), shown above the buttons. */
+  details?: (routine: Routine) => React.ReactNode;
+  allowSkip?: boolean;
+}) {
   const router = useRouter();
-  const d = planWeek(app, plan, today).days[weekday(today) - 1];
+  const doneIndex = day.session ? day.routines.findIndex((r) => r.id === day.session!.routineId) : -1;
+  const [pick, setPick] = useState(Math.max(0, doneIndex));
+  const routine = day.routines[Math.min(pick, day.routines.length - 1)];
+  const done = day.status === "done" && day.session;
 
-  return (
-    <section className="mt-3 rounded-2xl bg-card p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Today · {d.name}</h2>
-        <Link href="/plan" className="shrink-0 text-sm text-muted">
-          See the week ›
-        </Link>
-      </div>
+  const start = (r: Routine) => {
+    startRoutine(r);
+    router.push("/workout");
+  };
 
-      {d.status === "rest" && (
-        <>
-          <p className="mt-1 text-lg font-bold">Rest day</p>
-          <p className="text-sm text-muted">Nothing planned. Recover, or pick any workout below.</p>
-        </>
-      )}
+  const actions = routine
+    ? dayActions(day.status, { restDay: routine.restDay, workoutRunning: Boolean(app.active), allowSkip })
+    : [];
 
-      {d.status === "done" && d.session && (
-        <>
-          <p className="mt-1 text-lg font-bold">✓ {d.session.routineName}</p>
-          <p className="text-sm text-muted">
-            {new Date(d.session.startedAt).toDateString() === today.toDateString()
-              ? "Done for today. Nice."
-              : `Done early on ${new Date(d.session.startedAt).toLocaleDateString(undefined, { weekday: "long" })}.`}
-          </p>
-        </>
-      )}
-
-      {d.status === "skipped" && (
-        <>
-          <p className="mt-1 text-lg font-bold text-muted line-through">{d.routines.map((r) => r.name).join(" or ")}</p>
-          <button onClick={() => toggleSkip(plan.id, today, d.day)} className="mt-1 text-sm text-muted underline">
+  const button = (a: DayAction) => {
+    const primary = "flex-1 rounded-[14px] bg-accent p-[15px] text-base font-bold text-accent-ink";
+    const secondary = "rounded-[14px] bg-card2 px-4 py-3 text-sm font-semibold";
+    switch (a) {
+      case "start":
+        return (
+          <button key={a} onClick={() => start(routine!)} className={primary}>
+            Start workout
+          </button>
+        );
+      case "again":
+        return (
+          <button key={a} onClick={() => start(routine!)} className={`${secondary} flex-1`}>
+            Do it again
+          </button>
+        );
+      case "logMobility":
+        return (
+          <button key={a} onClick={() => start(routine!)} className={primary}>
+            Log mobility
+          </button>
+        );
+      case "logRest":
+        return (
+          <button key={a} onClick={() => logRestDay(routine!)} className={`${secondary} flex-1`}>
+            Log rest day
+          </button>
+        );
+      case "skip":
+        return (
+          <button key={a} onClick={() => toggleSkip(plan.id, today, day.day)} className={secondary}>
+            Skip
+          </button>
+        );
+      case "undoSkip":
+        return (
+          <button key={a} onClick={() => toggleSkip(plan.id, today, day.day)} className={`${secondary} flex-1`}>
             Undo skip
           </button>
+        );
+      case "resume":
+        return (
+          <Link key={a} href="/workout" className={`${secondary} flex-1 text-center`}>
+            Workout in progress ›
+          </Link>
+        );
+    }
+  };
+
+  return (
+    <section className="rounded-[22px] bg-card p-[18px]">
+      {eyebrow}
+
+      {day.status === "rest" && (
+        <>
+          <h2 className="mt-1.5 text-[22px] font-extrabold">Rest day</h2>
+          <p className="mt-1 text-sm text-muted">Nothing planned. Recover, or start any workout below.</p>
         </>
       )}
 
-      {(d.status === "today" || d.status === "missed" || d.status === "upcoming") &&
-        d.routines.map((r, i) => (
-          <div key={r.id} className={i > 0 ? "mt-4 border-t border-line pt-4" : "mt-1"}>
-            {i > 0 && <p className="mb-1 text-xs text-muted">or</p>}
-            <p className="text-lg font-bold">{r.name}</p>
-            {r.summary && <p className="text-sm text-muted">{r.summary}</p>}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {r.exercises.map((e) => (
-                <span key={e.name} className="rounded-lg bg-card2 px-2 py-1 text-xs text-[#c9c9d1]">
-                  {e.name}
-                </span>
+      {routine && day.status !== "rest" && (
+        <>
+          <h2 className={`mt-1.5 text-[22px] font-extrabold ${day.status === "skipped" ? "text-muted line-through" : ""}`}>
+            {done ? `✓ ${day.session!.routineName}` : routine.name}
+          </h2>
+          {done ? (
+            <p className="mt-1 text-sm text-muted">
+              {new Date(day.session!.startedAt).toDateString() === today.toDateString()
+                ? "Done for today. Nice."
+                : `Done on ${new Date(day.session!.startedAt).toLocaleDateString(undefined, { weekday: "long" })}.`}
+            </p>
+          ) : (
+            routine.summary && <p className="mt-1 text-sm leading-snug text-muted">{routine.summary}</p>
+          )}
+
+          {day.routines.length > 1 && !done && (
+            <div className="mt-3 flex gap-2" role="group" aria-label="Choose one">
+              {day.routines.map((r, i) => (
+                <button
+                  key={r.id}
+                  onClick={() => setPick(i)}
+                  aria-pressed={r.id === routine.id}
+                  className={`flex-1 rounded-xl border-2 p-2.5 text-sm font-semibold ${
+                    r.id === routine.id ? "border-accent text-accent" : "border-transparent bg-card2"
+                  }`}
+                >
+                  {r.name}
+                </button>
               ))}
             </div>
-            <div className="mt-3 flex gap-2">
-              {app.active ? (
-                <Link href="/workout" className="flex-1 rounded-xl bg-card2 p-3 text-center text-sm font-semibold">
-                  Workout in progress
-                </Link>
-              ) : (
-                <button
-                  onClick={() => {
-                    startRoutine(r);
-                    router.push("/workout");
-                  }}
-                  className="flex-1 rounded-xl bg-accent p-3.5 text-[15px] font-bold text-accent-ink"
-                >
-                  {r.restDay ? "Log mobility" : "Start workout"}
-                </button>
-              )}
-              {r.restDay && (
-                <button onClick={() => logRestDay(r)} className="flex-1 rounded-xl bg-card2 p-3 text-sm font-semibold">
-                  Log rest day
-                </button>
-              )}
+          )}
+
+          {!done && (
+            <div className="mt-3 flex gap-3.5 text-[13px] text-text2">
+              {routineMeta(routine).map((m) => (
+                <span key={m}>{m}</span>
+              ))}
             </div>
-          </div>
-        ))}
+          )}
+
+          {details?.(routine)}
+
+          {actions.length > 0 && <div className="mt-4 flex gap-2">{actions.map(button)}</div>}
+        </>
+      )}
     </section>
   );
 }

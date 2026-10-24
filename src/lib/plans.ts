@@ -151,3 +151,30 @@ export function planWeek(
 export function isPlainRestDay(s: Session): boolean {
   return Boolean(s.restDay) && !s.exercises.some((e) => e.sets.some((x) => x.done));
 }
+
+/** The next `n` plan days after today, stopping at Sunday (next week's days aren't in this week's status). */
+export function upcomingDays(todayNum: number, n = 3): number[] {
+  return Array.from({ length: n }, (_, k) => todayNum + k + 1).filter((d) => d <= 7);
+}
+
+/** Day number from a `?day=` value, or today if it's missing or invalid. */
+export function dayFromParam(param: string | null, todayNum: number): number {
+  const n = Number(param);
+  return Number.isInteger(n) && n >= 1 && n <= 7 ? n : todayNum;
+}
+
+export type DayAction = "start" | "again" | "logMobility" | "logRest" | "skip" | "undoSkip" | "resume";
+
+/** Which buttons a day card shows. */
+export function dayActions(
+  status: DayStatus,
+  opts: { restDay?: boolean; workoutRunning: boolean; allowSkip: boolean },
+): DayAction[] {
+  if (status === "rest") return [];
+  if (status === "skipped") return ["undoSkip"];
+  if (opts.workoutRunning) return ["resume"];
+  if (status === "done") return opts.restDay ? [] : ["again"];
+  const actions: DayAction[] = opts.restDay ? ["logMobility", "logRest"] : ["start"];
+  if (opts.allowSkip) actions.push("skip");
+  return actions;
+}
