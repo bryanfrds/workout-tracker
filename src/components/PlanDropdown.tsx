@@ -15,7 +15,11 @@ export default function PlanDropdown({ plans, active }: { plans: Plan[]; active?
     const close = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      ref.current?.querySelector("button")?.focus();
+    };
     document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", esc);
     return () => {
@@ -27,11 +31,17 @@ export default function PlanDropdown({ plans, active }: { plans: Plan[]; active?
   const item = "flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-[15px] hover:bg-card2";
 
   return (
-    <div ref={ref} className="relative mt-1">
+    <div
+      ref={ref}
+      className="relative mt-1"
+      onBlur={(e) => {
+        if (!ref.current?.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls="plan-menu"
         className="flex items-center gap-2 text-left text-3xl font-extrabold"
       >
         <span>{active?.name ?? "Pick a plan"}</span>
@@ -41,12 +51,11 @@ export default function PlanDropdown({ plans, active }: { plans: Plan[]; active?
       </button>
 
       {open && (
-        <div role="menu" className="absolute left-0 top-11 z-30 w-64 rounded-2xl border border-line bg-card p-1.5 shadow-2xl">
+        <div id="plan-menu" className="absolute left-0 top-11 z-30 w-64 rounded-2xl border border-line bg-card p-1.5 shadow-2xl">
           {plans.map((p) => (
             <button
               key={p.id}
-              role="menuitemradio"
-              aria-checked={p.id === active?.id}
+              aria-pressed={p.id === active?.id}
               onClick={() => {
                 setActivePlan(p.id);
                 setOpen(false);
@@ -57,13 +66,13 @@ export default function PlanDropdown({ plans, active }: { plans: Plan[]; active?
               {p.id === active?.id && <span>✓</span>}
             </button>
           ))}
-          <hr className="mx-1 my-1.5 border-line" />
+          <hr role="separator" className="mx-1 my-1.5 border-line" />
           {active && (
-            <Link role="menuitem" href={`/plans/${active.id}`} className={item}>
+            <Link href={`/plans/${active.id}`} className={item}>
               Edit this plan <span className="text-muted">›</span>
             </Link>
           )}
-          <Link role="menuitem" href="/plans/new" className={item}>
+          <Link href="/plans/new" className={item}>
             + New plan
           </Link>
         </div>
