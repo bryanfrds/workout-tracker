@@ -102,7 +102,14 @@
   --font-sans: var(--font-inter);
 }
 
-html,
+/*
+ * The page itself is painted by body. html's background is what shows wherever
+ * the browser paints nothing — on installed iPhone apps that includes a strip
+ * under the fixed tab bar — so it matches the bar.
+ */
+html {
+  background: var(--bar);
+}
 body {
   background: var(--bg);
   color: var(--text);
