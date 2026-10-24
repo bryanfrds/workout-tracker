@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PlanDropdown from "@/components/PlanDropdown";
 import { DayCard } from "@/components/TodayCard";
 import { weekStart, weekday } from "@/lib/hyrox";
-import { activePlan, planWeek, type DayStatus } from "@/lib/plans";
+import { activePlan, dayFromParam, planWeek, type DayStatus } from "@/lib/plans";
 import { setState, useAppState } from "@/lib/store";
 import type { Routine } from "@/lib/types";
 import { useToday } from "@/lib/use-today";
@@ -65,7 +64,7 @@ export default function PlanView() {
   const app = useAppState();
   const today = useToday();
   const params = useSearchParams();
-  const [picked, setPicked] = useState<number | null>(null);
+  const router = useRouter();
   if (!app || !today) return null;
 
   const plan = activePlan(app);
@@ -81,8 +80,8 @@ export default function PlanView() {
   }
 
   const { days, doneCount, trainingDays, recent } = planWeek(app, plan, today);
-  const fromUrl = Number(params.get("day"));
-  const sel = picked ?? (fromUrl >= 1 && fromUrl <= 7 ? fromUrl : weekday(today));
+  // The URL holds the selected day, so "Coming up" links and the strip can't disagree.
+  const sel = dayFromParam(params.get("day"), weekday(today));
   const day = days[sel - 1];
   const [label, pillClass] = PILL[day.status];
 
@@ -121,14 +120,13 @@ export default function PlanView() {
         </div>
       </section>
 
-      <div className="mt-3.5 grid grid-cols-7 gap-1.5" role="tablist" aria-label="Days">
+      <div className="mt-3.5 grid grid-cols-7 gap-1.5" role="group" aria-label="Days">
         {days.map((d) => (
           <button
             key={d.day}
-            role="tab"
-            aria-selected={d.day === sel}
+            aria-pressed={d.day === sel}
             aria-label={`${d.name}: ${PILL[d.status][0]}`}
-            onClick={() => setPicked(d.day)}
+            onClick={() => router.replace(`/plan?day=${d.day}`, { scroll: false })}
             className={`rounded-[14px] border-2 bg-card pb-2.5 pt-2 text-center ${d.day === sel ? "border-accent" : "border-transparent"}`}
           >
             <span className="block text-[11px] font-semibold text-muted">{d.name[0]}</span>

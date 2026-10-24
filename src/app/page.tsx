@@ -6,7 +6,7 @@ import PlanDropdown from "@/components/PlanDropdown";
 import { DayCard } from "@/components/TodayCard";
 import { weekday } from "@/lib/hyrox";
 import { startRoutine } from "@/lib/plan-actions";
-import { activePlan, planWeek } from "@/lib/plans";
+import { activePlan, planWeek, upcomingDays } from "@/lib/plans";
 import { useAppState } from "@/lib/store";
 import { useToday } from "@/lib/use-today";
 import { countSets, lastSessionOf } from "@/lib/workout";
@@ -33,7 +33,7 @@ export default function HomePage() {
   const plan = activePlan(app);
   const week = plan && planWeek(app, plan, today);
   const todayNum = weekday(today);
-  const upNext = week ? [1, 2, 3].map((k) => week.days[(todayNum - 1 + k) % 7]) : [];
+  const upNext = week ? upcomingDays(todayNum).map((d) => week.days[d - 1]) : [];
   const others = app.routines.filter((r) => !r.plan);
 
   return (
@@ -72,6 +72,7 @@ export default function HomePage() {
             plan={plan}
             today={today}
             day={week.days[todayNum - 1]}
+            allowSkip={false}
             eyebrow={<span className={`${eyebrow} !text-accent`}>Today</span>}
           />
         </div>
