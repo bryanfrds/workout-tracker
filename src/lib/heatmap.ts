@@ -16,6 +16,9 @@ export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
+/** Built once: formatting ~370 dates per render is slow on an old phone. */
+const DATE_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" });
+
 /** 0–4, matching the five shades in the legend. */
 function levelOf(count: number): Cell["level"] {
   if (count <= 0) return 0;
@@ -57,7 +60,7 @@ export function heatmapColumns(sessions: Session[], today: Date): Column[] {
         const count = counts.get(key) ?? 0;
         cells.push({
           key,
-          label: cursor.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }),
+          label: DATE_FORMAT.format(cursor),
           count,
           level: levelOf(count),
         });
@@ -69,10 +72,19 @@ export function heatmapColumns(sessions: Session[], today: Date): Column[] {
   return columns;
 }
 
-/** Total workouts in the shown year. */
-export function heatmapTotal(columns: Column[]): number {
+/**
+ * Total workouts in the last 365 days. The grid starts on a Monday, so its
+ * first column can reach up to six days further back — those don't count.
+ */
+export function heatmapTotal(columns: Column[], today: Date): number {
+  const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 364);
+  const fromKey = dayKey(from);
   let total = 0;
-  for (const col of columns) for (const cell of col.cells) total += cell?.count ?? 0;
+  for (const col of columns) {
+    for (const cell of col.cells) {
+      if (cell && cell.key >= fromKey) total += cell.count;
+    }
+  }
   return total;
 }
 

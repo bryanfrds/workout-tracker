@@ -81,7 +81,15 @@ describe("heatmapColumns", () => {
 
   it("drops workouts older than the window", () => {
     const cols = heatmapColumns([session("2020-01-01")], today);
-    expect(heatmapTotal(cols)).toBe(0);
+    expect(heatmapTotal(cols, today)).toBe(0);
+  });
+
+  it("counts only the last 365 days, not the Monday stub before them", () => {
+    // The grid starts Mon 31 Oct 2025; 365 days back from 28 Oct 2026 is 29 Oct 2025.
+    const stub = heatmapColumns([session("2025-10-27")], today);
+    expect(heatmapTotal(stub, today)).toBe(0);
+    const inside = heatmapColumns([session("2025-11-03")], today);
+    expect(heatmapTotal(inside, today)).toBe(1);
   });
 
   it("survives a spring-forward clock change", () => {
