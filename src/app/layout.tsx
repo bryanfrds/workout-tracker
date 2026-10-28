@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import RestPushSync from "@/components/RestPushSync";
+import SyncSessions from "@/components/SyncSessions";
 import ThemeSync from "@/components/ThemeSync";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <RegisterServiceWorker />
         <RestPushSync />
+        <SyncSessions />
         <ThemeSync />
       </body>
     </html>

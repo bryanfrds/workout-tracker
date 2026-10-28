@@ -1,35 +1,28 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useState, useSyncExternalStore } from "react";
-
-function subscribeOnline(cb: () => void) {
-  window.addEventListener("online", cb);
-  window.addEventListener("offline", cb);
-  return () => {
-    window.removeEventListener("online", cb);
-    window.removeEventListener("offline", cb);
-  };
-}
-
-/**
- * Offline, the session fetch fails quietly and next-auth reports "signed out".
- * Knowing the phone is offline lets us say so instead of offering a button
- * that can't work.
- */
-function useOnline(): boolean {
-  return useSyncExternalStore(
-    subscribeOnline,
-    () => navigator.onLine,
-    () => true,
-  );
-}
+import { useEffect, useState } from "react";
+import { setState } from "@/lib/store";
+import { useOnline } from "@/lib/use-online";
 
 /** Sign in with Google, or show who's signed in. */
 export default function AccountCard() {
   const { data: session, status } = useSession();
   const online = useOnline();
   const [busy, setBusy] = useState(false);
+
+  // Remembered on the phone so syncing can run on every page without each one
+  // having to ask the server who's signed in.
+  const id = session?.user?.id;
+  const name = session?.user?.name;
+  useEffect(() => {
+    if (status === "loading") return;
+    setState((s) => {
+      const next = id ? { id, name } : undefined;
+      if (s.account?.id === next?.id && s.account?.name === next?.name) return s;
+      return { ...s, account: next };
+    });
+  }, [status, id, name]);
 
   // Layout only — each button brings its own padding and weight.
   const button = "mt-3 w-full rounded-xl disabled:opacity-50";

@@ -14,4 +14,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   session: { strategy: "jwt" },
+  callbacks: {
+    // Google's "sub" never changes, unlike the email or display name, so it's
+    // what rows are keyed on. Auth.js drops it from the session by default.
+    jwt({ token, profile }) {
+      if (profile?.sub) token.sub = profile.sub;
+      return token;
+    },
+    session({ session, token }) {
+      if (token.sub) session.user.id = token.sub;
+      return session;
+    },
+  },
 });

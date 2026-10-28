@@ -112,4 +112,9 @@ export type AppState = {
   theme?: string;
   /** Plan days skipped, as "<plan id>:<week start date>:<day>", e.g. "ppl:2026-10-19:3". */
   planSkips?: string[];
+  /**
+   * Set once the user has signed in, so a signed-out phone never calls the
+   * server. Cleared on sign out; the workouts themselves stay on the phone.
+   */
+  account?: { id: string; name?: string | null };
 };
