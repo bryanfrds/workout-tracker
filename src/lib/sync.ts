@@ -89,12 +89,18 @@ export function toRow(userId: string, s: SyncSession) {
   };
 }
 
+/**
+ * How recent a session is: when it ended, or when it started if it never did.
+ * Shared so the merge and the push filter can't drift apart.
+ */
+export const stamp = (s: Session) => s.endedAt ?? s.startedAt;
+
 /** Newest wins when the same session exists on both sides. */
 export function mergeSessions(mine: Session[], theirs: Session[]): Session[] {
   const byId = new Map<string, Session>();
   for (const s of [...theirs, ...mine]) {
     const existing = byId.get(s.id);
-    if (!existing || (s.endedAt ?? s.startedAt) >= (existing.endedAt ?? existing.startedAt)) {
+    if (!existing || stamp(s) >= stamp(existing)) {
       byId.set(s.id, s);
     }
   }

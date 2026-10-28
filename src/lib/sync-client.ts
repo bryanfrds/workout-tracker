@@ -1,5 +1,5 @@
 import { setState } from "@/lib/store";
-import { MAX_SESSIONS, mergeSessions, toSync } from "@/lib/sync";
+import { MAX_SESSIONS, mergeSessions, stamp, toSync } from "@/lib/sync";
 import type { Session } from "@/lib/types";
 
 /** Thrown for a 401, so callers can tell "signed out" from "something broke". */
@@ -26,9 +26,6 @@ async function push(sessions: Session[]): Promise<void> {
     if (!res.ok) throw new Error("Couldn't save your workouts to the server.");
   }
 }
-
-/** How recent a session is: when it ended, or when it started if it's unfinished. */
-const stamp = (s: Session) => s.endedAt ?? s.startedAt;
 
 /**
  * Pulls what the server has, merges it with the phone's own, then pushes the

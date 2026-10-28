@@ -20,16 +20,16 @@ export function createSyncRunner(sync: () => Promise<unknown>): SyncRunner {
   const run = () => {
     running = true;
     again = false;
-    sync()
-      .then(
-        () => {},
-        // A failure (offline, server down) drops the pending re-run rather than
-        // retrying straight away — the next finished workout asks again.
-        () => {
-          again = false;
-        },
-      )
-      .then(() => {
+    // Started off a resolved promise so that a synchronous throw lands in the
+    // catch below rather than leaving `running` stuck true for good.
+    Promise.resolve()
+      .then(sync)
+      // A failure (offline, server down) drops the pending re-run rather than
+      // retrying straight away — the next finished workout asks again.
+      .catch(() => {
+        again = false;
+      })
+      .finally(() => {
         running = false;
         if (again && !stopped) run();
       });
