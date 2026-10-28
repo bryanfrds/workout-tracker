@@ -28,7 +28,8 @@ export default function RestTimer({ endsAt, onChange }: Props) {
 
   const btn = "rounded-lg bg-black/10 px-2.5 py-2 text-xs font-semibold";
   return (
-    <div className="fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md px-4">
+    // Sits 11px clear of the tab bar, border included.
+    <div className="fixed inset-x-0 bottom-[calc(var(--bar-h)+12px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md px-4">
       <div className="flex items-center justify-between rounded-2xl bg-accent px-4 py-3 text-accent-ink shadow-lg">
         <div>
           <div className="text-xs font-semibold">Rest</div>

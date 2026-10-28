@@ -109,6 +109,9 @@
  */
 html {
   background: var(--bar);
+  /* How tall the tab bar is above the home-indicator inset. The rest timer
+     sits on top of it, so both read this rather than hard-coding a number. */
+  --bar-h: 48px;
 }
 body {
   background: var(--bg);
