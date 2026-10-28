@@ -31,7 +31,8 @@ export default function AccountCard() {
   const online = useOnline();
   const [busy, setBusy] = useState(false);
 
-  const button = "mt-3 w-full rounded-xl p-3.5 font-bold disabled:opacity-50";
+  // Layout only — each button brings its own padding and weight.
+  const button = "mt-3 w-full rounded-xl disabled:opacity-50";
 
   return (
     <section className="mt-3 rounded-2xl bg-card p-4">
@@ -48,10 +49,11 @@ export default function AccountCard() {
             <button
               onClick={() => {
                 setBusy(true);
-                signIn("google");
+                // If the connection drops mid-tap, give the button back.
+                signIn("google").catch(() => setBusy(false));
               }}
               disabled={busy}
-              className={`${button} bg-accent text-accent-ink`}
+              className={`${button} bg-accent p-3.5 font-bold text-accent-ink`}
             >
               {busy ? "Opening Google…" : "Sign in with Google"}
             </button>
@@ -66,11 +68,12 @@ export default function AccountCard() {
         <>
           <p className="mt-1 text-sm text-muted">
             Signed in as {session.user?.name ?? session.user?.email ?? "you"}.
+            {!online && " Signing out will have to wait until you're back online."}
           </p>
           <button
             onClick={() => {
               setBusy(true);
-              signOut();
+              signOut().catch(() => setBusy(false));
             }}
             disabled={busy || !online}
             className={`${button} bg-card2 p-3 text-sm font-semibold`}

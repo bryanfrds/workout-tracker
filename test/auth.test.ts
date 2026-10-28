@@ -19,7 +19,7 @@ describe("auth config", () => {
     expect(typeof handlers.POST).toBe("function");
   });
 
-  it("offers Google, and keeps sessions in a cookie rather than a database", async () => {
+  it("offers Google and no other way in", async () => {
     const { handlers } = await import("@/auth");
     const res = await handlers.GET(new NextRequest("http://localhost:3000/api/auth/providers"));
     const providers = await res.json();
