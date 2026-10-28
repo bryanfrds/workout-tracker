@@ -47,6 +47,19 @@ describe("syncNow", () => {
     expect(posts).toHaveLength(0);
   });
 
+  it("pushes a session the server holds an older copy of", async () => {
+    serverHas = [session({ id: "a", endedAt: new Date(2026, 9, 26, 10).getTime() })];
+    await syncNow([session({ id: "a", endedAt: new Date(2026, 9, 26, 11).getTime() })]);
+    expect(posts).toHaveLength(1);
+    expect(posts[0].sessions).toHaveLength(1);
+  });
+
+  it("leaves a session alone when the server's copy is the newer one", async () => {
+    serverHas = [session({ id: "a", endedAt: new Date(2026, 9, 26, 11).getTime() })];
+    await syncNow([session({ id: "a", endedAt: new Date(2026, 9, 26, 10).getTime() })]);
+    expect(posts).toHaveLength(0);
+  });
+
   it("returns what the phone and server have between them", async () => {
     serverHas = [session({ id: "b" })];
     expect(await syncNow([session({ id: "a" })])).toBe(2);

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { getState, setState, useAppState } from "@/lib/store";
 import { SignedOutError, syncNow } from "@/lib/sync-client";
+import { createSyncRunner } from "@/lib/sync-runner";
 import { useOnline } from "@/lib/use-online";
 
 /**
@@ -15,40 +16,24 @@ export default function SyncSessions() {
   const online = useOnline();
   const accountId = app?.account?.id;
   const count = app?.sessions.length ?? 0;
-  const running = useRef(false);
-  const again = useRef(false);
+
+  // One runner for the component's whole life. Stopping it belongs to unmount,
+  // not to a change of account or session count — those are what ask it to run.
+  const runner = useRef<ReturnType<typeof createSyncRunner>>(null);
+  runner.current ??= createSyncRunner(() =>
+    syncNow(getState().sessions).catch((err) => {
+      // The cookie expired or they signed out elsewhere: stop trying until they
+      // sign in again. Anything else (offline, server down) is left alone.
+      if (err instanceof SignedOutError) setState((s) => ({ ...s, account: undefined }));
+      throw err;
+    }),
+  );
+
+  useEffect(() => () => runner.current?.stop(), []);
 
   useEffect(() => {
     if (!accountId || !online) return;
-    // A workout finished while a sync was in flight would otherwise be dropped:
-    // this run's merge already happened, and nothing else would wake it up.
-    if (running.current) {
-      again.current = true;
-      return;
-    }
-
-    let cancelled = false;
-    const run = () => {
-      running.current = true;
-      again.current = false;
-      syncNow(getState().sessions)
-        .catch((err) => {
-          // The cookie expired or they signed out elsewhere: stop trying until
-          // they sign in again. Anything else (offline, server down) is left
-          // alone, since the next finished workout retries.
-          if (err instanceof SignedOutError) setState((s) => ({ ...s, account: undefined }));
-          again.current = false;
-        })
-        .finally(() => {
-          running.current = false;
-          if (again.current && !cancelled) run();
-        });
-    };
-    run();
-
-    return () => {
-      cancelled = true;
-    };
+    runner.current?.request();
   }, [accountId, count, online]);
 
   return null;

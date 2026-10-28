@@ -27,6 +27,9 @@ async function push(sessions: Session[]): Promise<void> {
   }
 }
 
+/** How recent a session is: when it ended, or when it started if it's unfinished. */
+const stamp = (s: Session) => s.endedAt ?? s.startedAt;
+
 /**
  * Pulls what the server has, merges it with the phone's own, then pushes the
  * result back. Safe to run repeatedly: sessions upsert by id.
@@ -34,10 +37,14 @@ async function push(sessions: Session[]): Promise<void> {
 export async function syncNow(mine: Session[]): Promise<number> {
   const theirs = await pull();
   const merged = mergeSessions(mine, theirs);
-  // When the server is already holding everything we have, pushing it all back
-  // would just be a round trip for nothing.
-  const theirIds = new Set(theirs.map((s) => s.id));
-  const unsent = merged.filter((s) => !theirIds.has(s.id));
+  // Push what the server is missing, and anything it holds an older copy of.
+  // Checking the id alone isn't enough: a session the server already has, where
+  // the phone's copy is the newer one, would never be sent.
+  const theirsById = new Map(theirs.map((s) => [s.id, s]));
+  const unsent = merged.filter((s) => {
+    const theirCopy = theirsById.get(s.id);
+    return !theirCopy || stamp(s) > stamp(theirCopy);
+  });
   if (unsent.length > 0) await push(unsent);
   setState((s) => ({ ...s, sessions: mergeSessions(s.sessions, merged) }));
   return merged.length;
