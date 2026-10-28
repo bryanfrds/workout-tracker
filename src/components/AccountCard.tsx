@@ -1,30 +1,9 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { setState } from "@/lib/store";
-
-function subscribeOnline(cb: () => void) {
-  window.addEventListener("online", cb);
-  window.addEventListener("offline", cb);
-  return () => {
-    window.removeEventListener("online", cb);
-    window.removeEventListener("offline", cb);
-  };
-}
-
-/**
- * Offline, the session fetch fails quietly and next-auth reports "signed out".
- * Knowing the phone is offline lets us say so instead of offering a button
- * that can't work.
- */
-function useOnline(): boolean {
-  return useSyncExternalStore(
-    subscribeOnline,
-    () => navigator.onLine,
-    () => true,
-  );
-}
+import { useOnline } from "@/lib/use-online";
 
 /** Sign in with Google, or show who's signed in. */
 export default function AccountCard() {

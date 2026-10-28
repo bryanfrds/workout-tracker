@@ -34,13 +34,22 @@ await client.connect();
 let failed;
 try {
   // Bootstrapped here rather than in a migration file: the ledger has to exist
-  // before the first file can be recorded.
-  await client.query(`
-    create table if not exists schema_migrations (
-      filename text primary key,
-      applied_at timestamptz not null default now()
-    )
-  `);
+  // before the first file can be recorded. Under the lock and in a transaction,
+  // because "create table if not exists" races two concurrent runners.
+  await client.query("begin");
+  try {
+    await client.query("select pg_advisory_xact_lock($1)", [LOCK_ID]);
+    await client.query(`
+      create table if not exists schema_migrations (
+        filename text primary key,
+        applied_at timestamptz not null default now()
+      )
+    `);
+    await client.query("commit");
+  } catch (err) {
+    await client.query("rollback").catch(() => {});
+    throw err;
+  }
 
   const files = (await readdir(DB_DIR)).filter((f) => f.endsWith(".sql")).sort();
   const { rows } = await client.query("select filename from schema_migrations");

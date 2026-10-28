@@ -34,7 +34,11 @@ async function push(sessions: Session[]): Promise<void> {
 export async function syncNow(mine: Session[]): Promise<number> {
   const theirs = await pull();
   const merged = mergeSessions(mine, theirs);
-  await push(merged);
+  // When the server is already holding everything we have, pushing it all back
+  // would just be a round trip for nothing.
+  const theirIds = new Set(theirs.map((s) => s.id));
+  const unsent = merged.filter((s) => !theirIds.has(s.id));
+  if (unsent.length > 0) await push(unsent);
   setState((s) => ({ ...s, sessions: mergeSessions(s.sessions, merged) }));
   return merged.length;
 }
