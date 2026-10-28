@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
+import AccountCard from "@/components/AccountCard";
 import { createReminder, deleteReminder, isInstalled, pushSupported, subscribe, unsubscribe } from "@/lib/push-client";
 import { setState, useAppState } from "@/lib/store";
 import { THEMES, themeOf } from "@/lib/themes";
@@ -70,7 +71,9 @@ export default function SettingsPage() {
       </Link>
       <h1 className="mt-2 text-3xl font-extrabold">Settings</h1>
 
-      <section className="mt-4 rounded-2xl bg-card p-4">
+      <AccountCard />
+
+      <section className="mt-3 rounded-2xl bg-card p-4">
         <h2 className="font-bold">Colour theme</h2>
         <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label="Colour theme">
           {THEMES.map((t) => {
