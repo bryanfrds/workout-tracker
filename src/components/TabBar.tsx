@@ -16,7 +16,9 @@ export default function TabBar() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-bar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-md items-center justify-around text-[11px]">
+      {/* 48px of bar above the home-indicator inset, the same split iOS uses —
+          at h-16 the inset read as dead space under the labels. */}
+      <div className="mx-auto flex h-12 max-w-md items-center justify-around text-[11px]">
         {TABS.map((t) => (
           <Link
             key={t.href}
