@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { SessionProvider } from "next-auth/react";
 import { useState, useSyncExternalStore } from "react";
+import AccountCard from "@/components/AccountCard";
 import { createReminder, deleteReminder, isInstalled, pushSupported, subscribe, unsubscribe } from "@/lib/push-client";
 import { setState, useAppState } from "@/lib/store";
 import { THEMES, themeOf } from "@/lib/themes";
@@ -70,7 +72,16 @@ export default function SettingsPage() {
       </Link>
       <h1 className="mt-2 text-3xl font-extrabold">Settings</h1>
 
-      <section className="mt-4 rounded-2xl bg-card p-4">
+      {/*
+       * Only this page reads the session, so the provider lives here rather than in
+       * the root layout — otherwise every page would fetch /api/auth/session on load,
+       * and again each time the app came back to the foreground.
+       */}
+      <SessionProvider refetchOnWindowFocus={false}>
+        <AccountCard />
+      </SessionProvider>
+
+      <section className="mt-3 rounded-2xl bg-card p-4">
         <h2 className="font-bold">Colour theme</h2>
         <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label="Colour theme">
           {THEMES.map((t) => {
