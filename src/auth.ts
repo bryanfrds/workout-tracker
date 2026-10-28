@@ -1,3 +1,4 @@
+import "server-only";
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
@@ -13,6 +14,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   session: { strategy: "jwt" },
-  // Vercel's preview URLs change on every deploy; this lets them serve auth too.
-  trustHost: true,
 });

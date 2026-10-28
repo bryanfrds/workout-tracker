@@ -1,10 +1,37 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import { useState, useSyncExternalStore } from "react";
+
+function subscribeOnline(cb: () => void) {
+  window.addEventListener("online", cb);
+  window.addEventListener("offline", cb);
+  return () => {
+    window.removeEventListener("online", cb);
+    window.removeEventListener("offline", cb);
+  };
+}
+
+/**
+ * Offline, the session fetch fails quietly and next-auth reports "signed out".
+ * Knowing the phone is offline lets us say so instead of offering a button
+ * that can't work.
+ */
+function useOnline(): boolean {
+  return useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
+}
 
 /** Sign in with Google, or show who's signed in. */
 export default function AccountCard() {
   const { data: session, status } = useSession();
+  const online = useOnline();
+  const [busy, setBusy] = useState(false);
+
+  const button = "mt-3 w-full rounded-xl p-3.5 font-bold disabled:opacity-50";
 
   return (
     <section className="mt-3 rounded-2xl bg-card p-4">
@@ -12,19 +39,28 @@ export default function AccountCard() {
 
       {status === "loading" && <p className="mt-1 text-sm text-muted">Checking…</p>}
 
-      {status === "unauthenticated" && (
-        <>
+      {status === "unauthenticated" &&
+        (online ? (
+          <>
+            <p className="mt-1 text-sm text-muted">
+              Sign in to keep your workouts if you change phone, and to compare with friends.
+            </p>
+            <button
+              onClick={() => {
+                setBusy(true);
+                signIn("google");
+              }}
+              disabled={busy}
+              className={`${button} bg-accent text-accent-ink`}
+            >
+              {busy ? "Opening Google…" : "Sign in with Google"}
+            </button>
+          </>
+        ) : (
           <p className="mt-1 text-sm text-muted">
-            Sign in to keep your workouts if you change phone, and to compare with friends.
+            You&apos;re offline, so signing in will have to wait. Your workouts are saved on this phone either way.
           </p>
-          <button
-            onClick={() => signIn("google")}
-            className="mt-3 w-full rounded-xl bg-accent p-3.5 font-bold text-accent-ink"
-          >
-            Sign in with Google
-          </button>
-        </>
-      )}
+        ))}
 
       {status === "authenticated" && (
         <>
@@ -32,8 +68,12 @@ export default function AccountCard() {
             Signed in as {session.user?.name ?? session.user?.email ?? "you"}.
           </p>
           <button
-            onClick={() => signOut()}
-            className="mt-3 w-full rounded-xl bg-card2 p-3 text-sm font-semibold"
+            onClick={() => {
+              setBusy(true);
+              signOut();
+            }}
+            disabled={busy || !online}
+            className={`${button} bg-card2 p-3 text-sm font-semibold`}
           >
             Sign out
           </button>
