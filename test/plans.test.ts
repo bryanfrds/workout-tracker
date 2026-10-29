@@ -8,6 +8,7 @@ import {
   liveDays,
   planWeek,
   setPlanDay,
+  withCurrentPlan,
   withPlans,
   withoutRoutine,
 } from "@/lib/plans";
@@ -35,7 +36,8 @@ const status = (r: ReturnType<typeof planWeek>) => r.days.map((d) => d.status);
 
 describe("seed plans", () => {
   it("HYROX matches the plan routines' days; PPL rests on Sunday", () => {
-    expect(dayRoutines(hyrox, 7, routines).map((r) => r.name)).toEqual(["Easy run", "Basketball"]);
+    expect(dayRoutines(hyrox, 7, routines)).toEqual([]);
+    expect(dayRoutines(hyrox, 1, routines).map((r) => r.name)).toEqual(["Chest + triceps + easy run"]);
     expect(dayRoutines(hyrox, 5, routines)[0].restDay).toBe(true);
     expect(ppl.days.map((d) => d[0] ?? "rest")).toEqual(["push", "pull", "legs", "push", "pull", "legs", "rest"]);
   });
@@ -62,33 +64,88 @@ describe("seed plans", () => {
   });
 });
 
+describe("withCurrentPlan", () => {
+  /** A save made against the plan's first version. */
+  const old = (): AppState => ({
+    restSeconds: 90,
+    sessions: [
+      { id: "s1", routineId: "hyrox-tue-lower", routineName: "Lower body + sled", startedAt: 1, endedAt: 2, exercises: [] },
+    ],
+    activePlanId: "hyrox",
+    plans: [
+      { id: "hyrox", name: "HYROX week", days: [["hyrox-mon-run"], ["hyrox-tue-lower"], [], [], [], [], ["hyrox-sun-run"]] },
+      { id: "ppl", name: "PPL week", days: [["push"], ["pull"], ["legs"], [], [], [], []] },
+    ],
+    routines: [
+      { id: "push", name: "Push day", exercises: [] },
+      { id: "hyrox-mon-run", name: "Easy run", plan: "hyrox", day: 1, exercises: [] },
+      { id: "hyrox-tue-lower", name: "Lower body + sled", plan: "hyrox", day: 2, exercises: [] },
+      { id: "hyrox-sun-run", name: "Easy run", plan: "hyrox", day: 7, exercises: [] },
+      { id: "hyrox-sun-basketball", name: "Basketball", plan: "hyrox", day: 7, exercises: [] },
+    ],
+  });
+
+  it("points the week at the current routines, Sunday included", () => {
+    const next = withCurrentPlan(old());
+    const days = next.plans!.find((p) => p.id === "hyrox")!.days;
+    expect(days[0]).toEqual(["hyrox-mon-chest"]);
+    expect(days[6]).toEqual([]);
+    expect(days.flat()).toEqual(HYROX_ROUTINES.map((r) => r.id));
+  });
+
+  it("drops the routines the new week replaced and refreshes the ones it kept", () => {
+    const ids = withCurrentPlan(old()).routines.map((r) => r.id);
+    expect(ids).not.toContain("hyrox-tue-lower");
+    expect(ids).not.toContain("hyrox-sun-run");
+    expect(ids).toContain("push");
+  });
+
+  it("keeps the easy run and basketball for one-off logging, off the plan", () => {
+    const spare = withCurrentPlan(old()).routines.filter((r) => r.id.startsWith("hyrox-sun-basketball") || r.name === "Easy run");
+    expect(spare.map((r) => r.name)).toEqual(["Easy run", "Basketball"]);
+    for (const r of spare) expect(r.plan).toBeUndefined();
+  });
+
+  it("leaves other plans and finished sessions alone", () => {
+    const next = withCurrentPlan(old());
+    expect(next.plans!.find((p) => p.id === "ppl")).toEqual(old().plans![1]);
+    expect(next.sessions).toEqual(old().sessions);
+  });
+
+  it("does nothing to a save that's already current", () => {
+    const once = withCurrentPlan(old());
+    expect(withCurrentPlan(once)).toBe(once);
+    expect(withCurrentPlan(SEED)).toBe(SEED);
+  });
+});
+
 describe("planWeek (HYROX)", () => {
   it("marks done, skipped, missed, today and upcoming", () => {
     const r = planWeek(
-      app([finished("hyrox-mon-run", at(2026, 9, 19)), finished("hyrox-thu-intervals", at(2026, 9, 22))], ["hyrox:2026-10-19:2"]),
+      app([finished("hyrox-mon-chest", at(2026, 9, 19)), finished("hyrox-thu-intervals", at(2026, 9, 22))], ["hyrox:2026-10-19:2"]),
       hyrox,
       SAT,
     );
-    expect(status(r)).toEqual(["done", "skipped", "missed", "done", "missed", "today", "upcoming"]);
+    expect(status(r)).toEqual(["done", "skipped", "missed", "done", "missed", "today", "rest"]);
     expect(r.doneCount).toBe(2);
-    expect(r.trainingDays).toBe(7);
+    expect(r.trainingDays).toBe(6);
   });
 
-  it("counts either Sunday option, and done beats skipped", () => {
-    const r = planWeek(app([finished("hyrox-sun-basketball", at(2026, 9, 24))], ["hyrox:2026-10-19:7"]), hyrox, SAT);
-    expect(r.days[6]).toMatchObject({ status: "done", session: { routineId: "hyrox-sun-basketball" } });
+  it("leaves Sunday a rest day whatever was logged on it", () => {
+    const r = planWeek(app([finished("hyrox-sun-basketball", at(2026, 9, 25))], ["hyrox:2026-10-19:7"]), hyrox, SAT);
+    expect(r.days[6]).toMatchObject({ status: "rest", routines: [] });
   });
 
   it("counts a logged rest day as done for Friday", () => {
-    const r = planWeek(app([finished("hyrox-fri-rest", at(2026, 9, 23), { restDay: true })]), hyrox, SAT);
+    const r = planWeek(app([finished("hyrox-fri-recovery", at(2026, 9, 23), { restDay: true })]), hyrox, SAT);
     expect(r.days[4].status).toBe("done");
   });
 
   it("ignores unfinished sessions, last week's sessions and routines not in the plan", () => {
     const r = planWeek(
       app([
-        { ...finished("hyrox-mon-run", at(2026, 9, 19)), endedAt: undefined },
-        finished("hyrox-tue-lower", at(2026, 9, 18, 23)),
+        { ...finished("hyrox-mon-chest", at(2026, 9, 19)), endedAt: undefined },
+        finished("hyrox-wed-legs", at(2026, 9, 18, 23)),
         finished("push", at(2026, 9, 20)),
       ]),
       hyrox,
@@ -98,10 +155,11 @@ describe("planWeek (HYROX)", () => {
   });
 
   it("puts sessions in the right week across a daylight-saving change", () => {
-    const sunNight = new Date(2026, 2, 29, 23, 30).getTime(); // Sun 29 Mar 2026 (EU DST change)
-    expect(planWeek(app([finished("hyrox-sun-run", sunNight)]), hyrox, new Date(2026, 2, 29, 23, 45)).days[6].status).toBe("done");
-    const next = planWeek(app([finished("hyrox-sun-run", sunNight)]), hyrox, new Date(2026, 2, 30, 0, 15));
-    expect(next.days[6].status).toBe("upcoming");
+    const satNight = new Date(2026, 2, 28, 23, 30).getTime(); // Sat 28 Mar 2026, the weekend the clocks go forward
+    const done = planWeek(app([finished("hyrox-sat-conditioning", satNight)]), hyrox, new Date(2026, 2, 28, 23, 45));
+    expect(done.days[5].status).toBe("done");
+    const next = planWeek(app([finished("hyrox-sat-conditioning", satNight)]), hyrox, new Date(2026, 2, 30, 0, 15));
+    expect(next.days[5].status).toBe("upcoming");
     expect(next.recent.at(-2)?.done).toBe(1);
   });
 
@@ -148,7 +206,7 @@ describe("planWeek (PPL, same workout twice a week)", () => {
 
 describe("isPlainRestDay", () => {
   it("is true only for a rest day with nothing ticked", () => {
-    const fri = startSession(HYROX_ROUTINES.find((r) => r.id === "hyrox-fri-rest")!, []);
+    const fri = startSession(HYROX_ROUTINES.find((r) => r.id === "hyrox-fri-recovery")!, []);
     expect(isPlainRestDay(fri)).toBe(true);
     fri.exercises[0].sets[0].done = true;
     expect(isPlainRestDay(fri)).toBe(false);

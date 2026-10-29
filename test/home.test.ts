@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HYROX_ROUTINES } from "@/lib/hyrox";
+import { HYROX_ROUTINES, SPARE_ROUTINES } from "@/lib/hyrox";
 import { dayActions, dayFromParam, upcomingDays } from "@/lib/plans";
 import { DEFAULT_THEME, THEMES, statusBarStyle, themeOf, themeScript } from "@/lib/themes";
 import { routineMeta } from "@/lib/workout";
@@ -132,8 +132,8 @@ describe("themes", () => {
 
 describe("routineMeta", () => {
   it("counts sets, or rounds for circuits", () => {
-    expect(routineMeta(byId("hyrox-tue-lower"))).toEqual(["5 exercises", "17 sets"]);
-    expect(routineMeta(byId("hyrox-sat-conditioning"))).toEqual(["5 exercises", "3 rounds"]);
-    expect(routineMeta(byId("hyrox-mon-run"))).toEqual(["1 exercise", "1 set"]);
+    expect(routineMeta(byId("hyrox-wed-legs"))).toEqual(["5 exercises", "15 sets"]);
+    expect(routineMeta(byId("hyrox-sat-conditioning"))).toEqual(["7 exercises", "3 rounds"]);
+    expect(routineMeta(SPARE_ROUTINES[0])).toEqual(["1 exercise", "1 set"]);
   });
 });

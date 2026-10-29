@@ -1,11 +1,22 @@
-import { DAY_NAMES, HYROX_ROUTINES, skipKey, weekStart, weekday } from "./hyrox";
+import {
+  DAY_NAMES,
+  HYROX_ROUTINES,
+  REPLACED_ROUTINE_IDS,
+  SPARE_ROUTINES,
+  skipKey,
+  weekStart,
+  weekday,
+} from "./hyrox";
 import type { AppState, Plan, Routine, Session } from "./types";
 
 const hyroxDay = (day: number) => HYROX_ROUTINES.filter((r) => r.day === day).map((r) => r.id);
 
+/** Day 7 has no routines, which is what makes Sunday a full rest day. */
+const hyroxDays = () => [1, 2, 3, 4, 5, 6, 7].map(hyroxDay);
+
 /** Plans every new install starts with. Ids are stable so saved skips line up. */
 export const SEED_PLANS: Plan[] = [
-  { id: "hyrox", name: "HYROX week", days: [1, 2, 3, 4, 5, 6, 7].map(hyroxDay) },
+  { id: "hyrox", name: "HYROX week", days: hyroxDays() },
   { id: "ppl", name: "PPL week", days: [["push"], ["pull"], ["legs"], ["push"], ["pull"], ["legs"], []] },
 ];
 
@@ -18,6 +29,26 @@ export function withPlans(state: AppState): AppState {
   // Skips saved before plans existed were all HYROX ("2026-10-19:3").
   const planSkips = state.planSkips?.map((k) => (/^\d{4}-/.test(k) ? `hyrox:${k}` : k));
   return { ...state, plans, planSkips, activePlanId: state.activePlanId ?? plans[0]?.id };
+}
+
+/**
+ * Brings a save made against the plan's first version onto the current one: the
+ * week it points at, and the plan routines themselves. Runs once — afterwards
+ * none of the replaced ids are left, so it's a no-op.
+ *
+ * Finished sessions are left alone. They carry their own routine id and name,
+ * so history and the heatmap read exactly as before.
+ */
+export function withCurrentPlan(state: AppState): AppState {
+  const replaced = new Set<string>(REPLACED_ROUTINE_IDS);
+  if (!state.routines.some((r) => replaced.has(r.id))) return state;
+
+  const current = new Map([...HYROX_ROUTINES, ...SPARE_ROUTINES].map((r) => [r.id, r]));
+  const routines = state.routines
+    .filter((r) => !replaced.has(r.id))
+    .map((r) => current.get(r.id) ?? r);
+  const plans = state.plans?.map((p) => (p.id === "hyrox" ? { ...p, days: hyroxDays() } : p));
+  return { ...state, routines, plans };
 }
 
 export function activePlan(state: Pick<AppState, "plans" | "activePlanId">): Plan | undefined {
