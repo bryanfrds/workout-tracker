@@ -72,9 +72,17 @@ describe("themes", () => {
   });
 
   // black-translucent shortens the installed app's window by the status bar
-  // height, leaving a dead strip under the tab bar.
+  // height, leaving a dead strip under the tab bar. iOS reads the style from
+  // the layout's own metadata at launch, so that's the copy worth guarding.
   it("never asks for a translucent status bar", () => {
     for (const t of THEMES) expect(statusBarStyle(t.id)).not.toBe("black-translucent");
+  });
+
+  it("the layout takes its status-bar style from statusBarStyle", async () => {
+    const { readFileSync } = await import("node:fs");
+    const layout = readFileSync(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
+    expect(layout).not.toContain("black-translucent");
+    expect(layout).toContain("statusBarStyle: statusBarStyle(");
   });
 
   it("has a CSS block for every theme", async () => {

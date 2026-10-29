@@ -26,4 +26,5 @@ export const THEME_KEY = "workout-tracker:theme";
  * window the full screen height minus the status bar, but still positions it at
  * the top — leaving a dead strip the height of the status bar below the tab bar.
  */
-export const statusBarStyle = (id: string | undefined) => (id === "light" ? "default" : "black");
+export const statusBarStyle = (id: string | undefined): "default" | "black" =>
+  id === "light" ? "default" : "black";
