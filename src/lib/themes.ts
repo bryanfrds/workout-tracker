@@ -19,5 +19,11 @@ export function themeOf(id: string | undefined) {
 /** Small separate key so the pre-paint script doesn't parse all workout history. */
 export const THEME_KEY = "workout-tracker:theme";
 
-/** Light needs dark status-bar text on iPhone; the others draw white text over the page. */
-export const statusBarStyle = (id: string | undefined) => (id === "light" ? "default" : "black-translucent");
+/**
+ * Light needs dark status-bar text on iPhone; the others need white.
+ *
+ * Deliberately not "black-translucent": under it iOS hands the installed app a
+ * window the full screen height minus the status bar, but still positions it at
+ * the top — leaving a dead strip the height of the status bar below the tab bar.
+ */
+export const statusBarStyle = (id: string | undefined) => (id === "light" ? "default" : "black");

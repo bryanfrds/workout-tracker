@@ -19,7 +19,7 @@ const THEME_SCRIPT = `try{var t=localStorage.getItem("workout-tracker:theme");if
 export const metadata: Metadata = {
   title: "Workout",
   description: "Tick off your sets, rest between them, see your history.",
-  appleWebApp: { capable: true, title: "Workout", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Workout", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {
