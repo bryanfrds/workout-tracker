@@ -5,7 +5,7 @@ import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import RestPushSync from "@/components/RestPushSync";
 import SyncSessions from "@/components/SyncSessions";
 import ThemeSync from "@/components/ThemeSync";
-import { DEFAULT_THEME, THEMES, THEME_KEY, statusBarStyle, themeOf } from "@/lib/themes";
+import { DEFAULT_THEME, statusBarStyle, themeOf, themeScript } from "@/lib/themes";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -14,15 +14,7 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-/**
- * Runs before first paint, so the saved theme applies without a colour flash.
- * The background colours and the status-bar styles are baked in from THEMES
- * rather than written out by hand, so this can't drift from the real themes.
- * The status bar is opaque now, so its colour comes from theme-color.
- */
-const THEME_SCRIPT = `try{var B=${JSON.stringify(
-  Object.fromEntries(THEMES.map((t) => [t.id, [t.bg, statusBarStyle(t.id)]])),
-)};var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(B[t]){document.documentElement.dataset.theme=t;var c=document.querySelector('meta[name="theme-color"]');if(c)c.content=B[t][0];var m=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(m)m.content=B[t][1]}}catch(e){}`;
+const THEME_SCRIPT = themeScript();
 
 export const metadata: Metadata = {
   title: "Workout",
