@@ -1,8 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { HYROX_ROUTINES, withPlanRoutines } from "./hyrox";
-import { SEED_PLANS, withPlans } from "./plans";
+import { HYROX_ROUTINES, SPARE_ROUTINES, withPlanRoutines } from "./hyrox";
+import { SEED_PLANS, withCurrentPlan, withPlans } from "./plans";
 import { DEFAULT_THEME } from "./themes";
 import type { AppState } from "./types";
 
@@ -44,6 +44,7 @@ export const SEED: AppState = {
       ],
     },
     ...HYROX_ROUTINES,
+    ...SPARE_ROUTINES,
   ],
   plans: SEED_PLANS,
 };
@@ -55,7 +56,10 @@ function load(): AppState {
   if (state) return state;
   try {
     const raw = localStorage.getItem(KEY);
-    const saved = raw ? { ...SEED, plans: undefined, ...(JSON.parse(raw) as AppState) } : SEED;
+    const raw_ = raw ? { ...SEED, plans: undefined, ...(JSON.parse(raw) as AppState) } : SEED;
+    // Saves made against the plan's first version are brought onto the current
+    // one before anything is added, so the old week isn't left half in place.
+    const saved = withCurrentPlan(raw_);
     // Saves from before the HYROX plan / multiple plans existed get them added.
     state = withPlans({ ...saved, routines: withPlanRoutines(saved.routines) });
   } catch {
