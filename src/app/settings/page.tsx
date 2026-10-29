@@ -189,6 +189,12 @@ export default function SettingsPage() {
       )}
 
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+
+      {/* Temporary, alongside /debug: the installed app has no address bar, so
+          this is the only way to reach that page from the home screen. */}
+      <Link href="/debug" className="mt-3 block text-center text-sm text-muted underline">
+        Debug
+      </Link>
     </>
   );
 }
