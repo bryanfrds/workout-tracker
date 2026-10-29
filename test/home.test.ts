@@ -67,8 +67,14 @@ describe("themes", () => {
 
   it("uses dark status-bar text only for the light theme", () => {
     expect(statusBarStyle("light")).toBe("default");
-    expect(statusBarStyle("ocean")).toBe("black-translucent");
-    expect(statusBarStyle(undefined)).toBe("black-translucent");
+    expect(statusBarStyle("ocean")).toBe("black");
+    expect(statusBarStyle(undefined)).toBe("black");
+  });
+
+  // black-translucent shortens the installed app's window by the status bar
+  // height, leaving a dead strip under the tab bar.
+  it("never asks for a translucent status bar", () => {
+    for (const t of THEMES) expect(statusBarStyle(t.id)).not.toBe("black-translucent");
   });
 
   it("has a CSS block for every theme", async () => {
