@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HYROX_ROUTINES } from "@/lib/hyrox";
 import { dayActions, dayFromParam, upcomingDays } from "@/lib/plans";
-import { DEFAULT_THEME, THEMES, statusBarStyle, themeOf } from "@/lib/themes";
+import { DEFAULT_THEME, THEMES, statusBarStyle, themeOf, themeScript } from "@/lib/themes";
 import { routineMeta } from "@/lib/workout";
 
 const byId = (id: string) => HYROX_ROUTINES.find((r) => r.id === id)!;
@@ -67,8 +67,60 @@ describe("themes", () => {
 
   it("uses dark status-bar text only for the light theme", () => {
     expect(statusBarStyle("light")).toBe("default");
-    expect(statusBarStyle("ocean")).toBe("black-translucent");
-    expect(statusBarStyle(undefined)).toBe("black-translucent");
+    expect(statusBarStyle("ocean")).toBe("black");
+    expect(statusBarStyle(undefined)).toBe("black");
+  });
+
+  // black-translucent shortens the installed app's window by the status bar
+  // height, leaving a dead strip under the tab bar. iOS reads the style from
+  // the layout's own metadata at launch, so that's the copy worth guarding.
+  it("never asks for a translucent status bar", () => {
+    for (const t of THEMES) expect(statusBarStyle(t.id)).not.toBe("black-translucent");
+  });
+
+  /** Runs the pre-paint script against stand-ins, and reports what it wrote. */
+  function runThemeScript(saved: string | null) {
+    const metas: Record<string, { content: string }> = {
+      "theme-color": { content: "" },
+      "apple-mobile-web-app-status-bar-style": { content: "" },
+    };
+    const root = { dataset: {} as Record<string, string> };
+    const doc = {
+      documentElement: root,
+      querySelector: (sel: string) => metas[sel.replace(/^meta\[name="(.*)"\]$/, "$1")] ?? null,
+    };
+    new Function("localStorage", "document", themeScript())({ getItem: () => saved }, doc);
+    return {
+      theme: root.dataset.theme,
+      color: metas["theme-color"].content,
+      statusBar: metas["apple-mobile-web-app-status-bar-style"].content,
+    };
+  }
+
+  it("applies a saved dark theme before the page is painted", () => {
+    expect(runThemeScript("mono")).toEqual({ theme: "mono", color: themeOf("mono").bg, statusBar: "black" });
+  });
+
+  it("applies the light theme, including its dark status-bar text", () => {
+    expect(runThemeScript("light")).toEqual({ theme: "light", color: themeOf("light").bg, statusBar: "default" });
+  });
+
+  it.each([["nothing saved", null], ["a theme that no longer exists", "neon"], ["an inherited property", "toString"]])(
+    "leaves the markup alone with %s",
+    (_label, saved) => {
+      expect(runThemeScript(saved)).toEqual({ theme: undefined, color: "", statusBar: "" });
+    },
+  );
+
+  it("can't be cut short by a theme value", () => {
+    expect(themeScript()).not.toContain("</script");
+  });
+
+  it("the layout takes its status-bar style from statusBarStyle", async () => {
+    const { readFileSync } = await import("node:fs");
+    const layout = readFileSync(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
+    expect(layout).not.toContain("black-translucent");
+    expect(layout).toContain("statusBarStyle: statusBarStyle(");
   });
 
   it("has a CSS block for every theme", async () => {

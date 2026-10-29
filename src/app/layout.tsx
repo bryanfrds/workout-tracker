@@ -5,6 +5,7 @@ import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import RestPushSync from "@/components/RestPushSync";
 import SyncSessions from "@/components/SyncSessions";
 import ThemeSync from "@/components/ThemeSync";
+import { DEFAULT_THEME, statusBarStyle, themeOf, themeScript } from "@/lib/themes";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -13,17 +14,19 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-// Keep in step with THEME_KEY and statusBarStyle in src/lib/themes.ts.
-const THEME_SCRIPT = `try{var t=localStorage.getItem("workout-tracker:theme");if(t){document.documentElement.dataset.theme=t;if(t==="light"){var m=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(m)m.content="default"}}}catch(e){}`;
+const THEME_SCRIPT = themeScript();
 
 export const metadata: Metadata = {
   title: "Workout",
   description: "Tick off your sets, rest between them, see your history.",
-  appleWebApp: { capable: true, title: "Workout", statusBarStyle: "black-translucent" },
+  // iOS reads this one at launch, so it's the copy that matters.
+  appleWebApp: { capable: true, title: "Workout", statusBarStyle: statusBarStyle(DEFAULT_THEME) },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07111f",
+  // The default theme's background. THEME_SCRIPT swaps it before first paint if
+  // another theme is saved; the status bar is painted with it.
+  themeColor: themeOf(DEFAULT_THEME).bg,
   viewportFit: "cover",
 };
 
